@@ -7,6 +7,7 @@ import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Tabs } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { SymbolView } from 'expo-symbols';
+import { CreatorCredit } from '@/components/CreatorCredit';
 
 // IMPORTANT: iOS 26 uses NativeTabs for native tabs with liquid glass support.
 // NativeTabs intentionally does NOT use custom design tokens — liquid glass
@@ -14,20 +15,23 @@ import { SymbolView } from 'expo-symbols';
 // Custom brand colors are applied only on the ClassicTabLayout path (older iOS / Android / web).
 function NativeTabLayout() {
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: 'house', selected: 'house.fill' }} />
-        <Label>Главная</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="orders">
-        <Icon sf={{ default: 'doc.text', selected: 'doc.text.fill' }} />
-        <Label>Заявки</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} />
-        <Label>Профиль</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <View style={styles.layout}>
+      <NativeTabs>
+        <NativeTabs.Trigger name="index">
+          <Icon sf={{ default: 'house', selected: 'house.fill' }} />
+          <Label>Главная</Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="orders">
+          <Icon sf={{ default: 'doc.text', selected: 'doc.text.fill' }} />
+          <Label>Заявки</Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="profile">
+          <Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} />
+          <Label>Профиль</Label>
+        </NativeTabs.Trigger>
+      </NativeTabs>
+      <CreatorCredit floating />
+    </View>
   );
 }
 
@@ -39,76 +43,82 @@ function ClassicTabLayout() {
   const isWeb = Platform.OS === 'web';
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.mutedForeground,
-        headerShown: true,
-        tabBarStyle: {
-          position: 'absolute',
-          backgroundColor: isIOS ? 'transparent' : colors.background,
-          borderTopWidth: isWeb ? 1 : 0,
-          borderTopColor: colors.border,
-          elevation: 0,
-          ...(isWeb ? { height: 84 } : {}),
-        },
-        tabBarBackground: () =>
-          isIOS ? (
-            <BlurView
-              intensity={100}
-              tint={isDark ? 'dark' : 'light'}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : isWeb ? (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: colors.background },
-              ]}
-            />
-          ) : null,
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Главная',
-          tabBarIcon: ({ color }) =>
+    <View style={styles.layout}>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.mutedForeground,
+          headerShown: true,
+          tabBarStyle: {
+            position: 'absolute',
+            backgroundColor: isIOS ? 'transparent' : colors.background,
+            borderTopWidth: isWeb ? 1 : 0,
+            borderTopColor: colors.border,
+            elevation: 0,
+            ...(isWeb ? { height: 84 } : {}),
+          },
+          tabBarBackground: () =>
             isIOS ? (
-              <SymbolView name="house" tintColor={color} size={24} />
-            ) : (
-              <Feather name="home" size={22} color={color} />
-            ),
+              <BlurView
+                intensity={100}
+                tint={isDark ? 'dark' : 'light'}
+                style={StyleSheet.absoluteFill}
+              />
+            ) : isWeb ? (
+              <View
+                style={[
+                  StyleSheet.absoluteFill,
+                  { backgroundColor: colors.background },
+                ]}
+              />
+            ) : null,
         }}
-      />
-      <Tabs.Screen
-        name="orders"
-        options={{
-          title: 'Заявки',
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="doc.text" tintColor={color} size={24} />
-            ) : (
-              <Feather name="file-text" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Профиль',
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person.crop.circle" tintColor={color} size={24} />
-            ) : (
-              <Feather name="user" size={22} color={color} />
-            ),
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Главная',
+            tabBarIcon: ({ color }) =>
+              isIOS ? (
+                <SymbolView name="house" tintColor={color} size={24} />
+              ) : (
+                <Feather name="home" size={22} color={color} />
+              ),
+          }}
+        />
+        <Tabs.Screen
+          name="orders"
+          options={{
+            title: 'Заявки',
+            tabBarIcon: ({ color }) =>
+              isIOS ? (
+                <SymbolView name="doc.text" tintColor={color} size={24} />
+              ) : (
+                <Feather name="file-text" size={22} color={color} />
+              ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: 'Профиль',
+            tabBarIcon: ({ color }) =>
+              isIOS ? (
+                <SymbolView name="person.crop.circle" tintColor={color} size={24} />
+              ) : (
+                <Feather name="user" size={22} color={color} />
+              ),
+          }}
+        />
+      </Tabs>
+      <CreatorCredit floating />
+    </View>
   );
 }
 
+const styles = StyleSheet.create({
+  layout: { flex: 1 },
+});
 export default function TabLayout() {
   if (isLiquidGlassAvailable()) {
     return <NativeTabLayout />;

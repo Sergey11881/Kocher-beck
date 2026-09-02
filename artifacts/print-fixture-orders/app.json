@@ -6,12 +6,12 @@
     "orientation": "portrait",
     "icon": "./assets/images/company-logo.png",
     "scheme": "print-fixture-orders",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/company-logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#080808"
+      "backgroundColor": "#ffffff"
     },
     "ios": {
       "supportsTablet": false
