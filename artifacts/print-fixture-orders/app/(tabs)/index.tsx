@@ -25,7 +25,7 @@ export default function HomeScreen() {
           <Text style={[styles.eyebrow, { color: colors.primary }]}>ТИПОГРАФСКАЯ ОСНАСТКА</Text>
           <Text style={[styles.greeting, { color: colors.foreground }]}>Новая заявка</Text>
         </View>
-        <Image source={require('@/assets/images/company-logo.png')} style={styles.logo} resizeMode="cover" />
+        <Image source={require('@/assets/images/company-logo.png')} style={styles.logo} resizeMode="contain" />
       </View>
 
       <View style={[styles.hero, { backgroundColor: colors.foreground }]}>
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 },
   eyebrow: { fontSize: 10, letterSpacing: 1.4, fontFamily: 'Inter_700Bold', marginBottom: 5 },
   greeting: { fontSize: 26, lineHeight: 32, fontFamily: 'Inter_700Bold' },
-  logo: { width: 52, height: 52, borderRadius: 15 },
+  logo: { width: 100, height: 38 },
   hero: { marginHorizontal: 20, borderRadius: 24, overflow: 'hidden', minHeight: 284 },
   heroContent: { padding: 24, zIndex: 1, maxWidth: 310 },
   heroKicker: { fontSize: 12, fontFamily: 'Inter_700Bold', letterSpacing: 1.1, marginBottom: 14 },

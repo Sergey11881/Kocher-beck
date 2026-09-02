@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -15,6 +15,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { OrdersProvider } from '@/context/OrdersContext';
 import { setBaseUrl } from '@workspace/api-client-react';
+import { LogoAssemblyIntro } from '@/components/LogoAssemblyIntro';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -37,6 +38,8 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+  const [showIntro, setShowIntro] = useState(true);
+  const finishIntro = useCallback(() => setShowIntro(false), []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
@@ -54,6 +57,7 @@ export default function RootLayout() {
             <GestureHandlerRootView style={{ flex: 1 }}>
               <KeyboardProvider>
                 <RootLayoutNav />
+                {showIntro ? <LogoAssemblyIntro onComplete={finishIntro} /> : null}
               </KeyboardProvider>
             </GestureHandlerRootView>
           </OrdersProvider>
