@@ -1,0 +1,1039 @@
+rom flask import Flask, request, redirect, url_for, render_template_string, send_from_directory, flash
+import sqlite3
+import os
+import uuid
+from datetime import datetime
+
+app = Flask(__name__)
+app.secret_key = "toolorder-secret-key-change-me"
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+DB_FILE = os.path.join(BASE_DIR, "toolorder.db")
+
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+PRODUCTS = {
+    "magnetic": {
+        "name": "Магнитный цилиндр",
+        "fields": [
+            ("machine", "Марка и модель машины", "text", True),
+            ("machine_photo", "Фото шильдика машины", "file", True),
+            ("cylinder_id", "ID номер цилиндра Kocher+Beck / аналог другого Z", "text", False),
+            ("drawing", "Чертеж магнитного цилиндра и шестерни с линейными размерами", "file", True),
+            ("teeth", "Количество зубьев / Z", "number", True),
+            ("repeat", "Раппорт", "text", True),
+            ("cylinder_count", "Количество цилиндров каждого раппорта", "number", True),
+        ]
+    },
+
+    "printing": {
+        "name": "Формные / печатные цилиндры",
+        "fields": [
+            ("machine", "Марка и модель машины", "text", True),
+            ("drawing", "Чертеж формного / печатного цилиндра и шестерни с линейными размерами", "file", True),
+            ("teeth", "Количество зубьев / Z", "number", True),
+            ("repeat", "Раппорт", "text", True),
+            ("cylinder_count", "Количество цилиндров", "number", True),
+            ("tape", "Толщина 2-х стороннего скотча, мм", "number", True),
+            ("polymer", "Толщина полимера / формы, мм", "number", True),
+        ]
+    },
+
+    "counterpressure": {
+        "name": "Цилиндр противодавления",
+        "fields": [
+            ("machine", "Марка и модель машины", "text", True),
+            ("drawing", "Чертеж цилиндра противодавления и шестерни с линейными размерами", "file", True),
+            ("shaft_count", "Количество валов", "number", True),
+        ]
+    },
+
+    "solid_die": {
+        "name": "Цельнометаллический вырубной цилиндр",
+        "fields": [
+            ("machine", "Марка и модель машины", "text", True),
+            ("drawing", "Чертеж магнитного цилиндра и шестерни с линейными размерами", "file", True),
+            ("repeat", "Какой раппорт / Z нужен", "text", True),
+            ("die_drawing", "Чертеж вырубки / чертеж режущих кромок", "file", True),
+            ("cut_type", "Тип операции", "select", True),
+            ("material", "Техническая спецификация материала", "textarea", True),
+            ("sample", "Образец материала для прокаток", "file", False),
+        ]
+    },
+
+    "embossing": {
+        "name": "Конгревные цилиндры",
+        "fields": [
+            ("machine", "Марка и модель машины", "text", True),
+            ("magnetic_drawing", "Чертеж магнитного цилиндра и шестерни", "file", True),
+            ("counter_drawing", "Чертеж цилиндра противодавления и шестерни", "file", True),
+            ("teeth", "Количество зубьев / Z магнитного цилиндра", "number", True),
+            ("repeat", "Раппорт", "text", True),
+            ("tape", "Толщина 2-х стороннего скотча, мм", "number", True),
+            ("polymer", "Толщина полимера, мм", "number", True),
+            ("material_thickness", "Толщина материала для вычисления глубины конгрева, мм", "number", True),
+            ("material", "Технические характеристики материала", "textarea", True),
+        ]
+    },
+
+    "gapmaster": {
+        "name": "GapMaster",
+        "fields": [
+            ("machine", "Марка и модель машины", "text", True),
+            ("machine_photo", "Фото шильдика машины", "file", True),
+            ("counter_drawing", "Чертеж цилиндра противодавления и шестерни", "file", True),
+            ("section_inside", "Фото вырубной секции — внутренняя сторона", "file", True),
+            ("section_outside", "Фото вырубной секции — внешняя сторона", "file", True),
+            ("section_side", "Фото вырубной сек
+17:05
+ции — сбоку", "file", True),
+            ("section_top", "Фото вырубной секции — сверху", "file", True),
+            ("pressure_system", "Фото системы контроля давления", "file", True),
+            ("minimum_z", "Минимальный Z / раппорт магнитного цилиндра", "text", True),
+        ]
+    },
+
+    "kms": {
+        "name": "KMS",
+        "fields": [
+            ("machine", "Марка и модель машины", "text", True),
+            ("working_width", "Рабочая ширина, мм", "number", True),
+            ("screw_length", "Длина винта для поддачи давления, мм", "number", True),
+            ("tip_photo", "Фото наконечника с нескольких ракурсов", "file", True),
+            ("spindle_photo", "Фото шпиндельной площадки", "file", True),
+            ("spindle_width", "Ширина шпиндельной площадки, мм", "number", True),
+            ("beam_photo", "Фото балки, куда упирается наконечник", "file", True),
+        ]
+    },
+
+    "flat_base": {
+        "name": "Плоская магнитная база",
+        "fields": [
+            ("machine", "Марка и модель машины", "text", True),
+            ("machine_photo", "Фото шильдика машины", "file", True),
+            ("drawing", "Чертеж плиты", "file", True),
+            ("working_width", "Рабочая ширина, мм", "number", False),
+            ("length", "Длина, мм", "number", False),
+            ("width", "Ширина, мм", "number", False),
+            ("thickness", "Толщина, мм", "number", False),
+            ("notes", "Дополнительные требования", "textarea", False),
+        ]
+    }
+}
+
+
+def db():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    conn = db()
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_number TEXT UNIQUE,
+            product_type TEXT,
+            product_name TEXT,
+            client TEXT,
+            contact TEXT,
+            comment TEXT,
+            data TEXT,
+            created_at TEXT
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+init_db()
+
+
+HTML = """
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>ToolOrder Pro</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f4f6f8;
+    color: #18212b;
+}
+
+header {
+    background: #101820;
+    color: white;
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.logo span {
+    color: #62b6ff;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    margin-left: 20px;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 30px auto;
+    padding: 0 18px;
+}
+
+.card {
+    background: white;
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 22px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.07);
+}
+
+h1 {
+    margin-top: 0;
+}
+
+h2 {
+    margin-top: 0;
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.product {
+    border: 2px solid #e2e7ec;
+    padding: 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    background: white;
+    transition: .2s;
+}
+
+.product:hover {
+    border-color: #1989ff;
+    transform: translateY(-2px);
+}
+
+.product.active {
+    border-color: #1989ff;
+    background: #eef7ff;
+}
+
+.product-icon {
+    font-size: 30px;
+    margin-bottom: 10px;
+}
+
+.product-title {
+    font-weight: bold;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+}
+
+.field.full {
+    grid-column: 1 / -1;
+}
+
+label {
+    font-weight: bold;
+    margin-bottom: 7px;
+}
+
+.required {
+    color: #e53935;
+}
+
+input,
+textarea,
+select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd3db;
+    border-radius: 8px;
+    font-size: 15px;
+    background: white;
+}
+
+textarea {
+    min-height: 110px;
+    resize: ve
+17:05
+rtical;
+}
+
+input[type=file] {
+    padding: 9px;
+}
+
+button {
+    border: none;
+    border-radius: 9px;
+    padding: 13px 20px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: #1989ff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0875df;
+}
+
+.btn-secondary {
+    background: #e9eef3;
+    color: #18212b;
+}
+
+.hidden {
+    display: none;
+}
+
+.order-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.order {
+    border: 1px solid #dde3e8;
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.badge {
+    background: #eaf5ff;
+    color: #0875df;
+    padding: 5px 9px;
+    border-radius: 20px;
+    font-size: 13px;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+.success {
+    background: #e7f7ed;
+    color: #176b35;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+@media(max-width: 800px) {
+
+    .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .field.full {
+        grid-column: auto;
+    }
+
+    header {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    nav a {
+        margin: 0 7px;
+    }
+}
+
+@media(max-width: 500px) {
+
+    .product-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card {
+        padding: 16px;
+    }
+
+    .order {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+
+<div class="logo">
+Tool<span>Order</span> Pro
+</div>
+
+<nav>
+<a href="/">Новая заявка</a>
+<a href="/orders">Заявки</a>
+</nav>
+
+</header>
+
+<div class="container">
+
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+{% for message in messages %}
+<div class="success">{{ message }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+{% block content %}{% endblock %}
+
+</div>
+
+</body>
+</html>
+"""
+
+
+INDEX = """
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="card">
+
+<h1>Новая заявка на оснастку</h1>
+
+<p>
+Выберите тип оснастки. После выбора появятся необходимые технические параметры.
+</p>
+
+<div class="product-grid">
+
+{% for key, product in products.items() %}
+
+<div class="product"
+     onclick="selectProduct('{{ key }}', this)">
+
+<div class="product-icon">
+{% if key == 'magnetic' %}⚙️ 
+{% elif key == 'printing' %}🖨️ 
+{% elif key == 'counterpressure' %}🔩 
+{% elif key == 'solid_die' %}✂️ 
+{% elif key == 'embossing' %}🔨 
+{% elif key == 'gapmaster' %}🎛️ 
+{% elif key == 'kms' %}⚙️ 
+{% else %}⬛
+{% endif %}
+</div>
+
+<div class="product-title">
+{{ product.name
+ }}
+</div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+</div>
+
+
+<form method="POST"
+      action="/create"
+      enctype="multipart/form-data"
+      id="orderForm"
+      class="hidden">
+
+<input type="hidden"
+       name="product_type"
+       id="product_type">
+
+
+<div class="card">
+
+<h2>Информация о заказчике</h2>
+
+<div class="form-grid">
+
+<div class="field">
+
+<label>Компания / заказчик</label>
+
+<input name="client"
+       placeholder="Название компании">
+
+</div>
+
+<div class="field">
+
+<label>Контактное лицо</label>
+
+<input name="contact"
+       placeholder="ФИО">
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<h2 id="productHeading"></h2>
+
+<div id="dynamicFields"
+     class="form-grid">
+</div>
+
+</div>
+
+
+<div class="card">
+
+<h2>Комментарий</h2>
+
+<div class="field">
+
+<textarea name="comment"
+          placeholder="Дополнительная информация, особые требования, комментарии инженера..."></textarea>
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<button class="btn-primary"
+        type="submit">
+
+Создать заявку
+
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+
+<script>
+
+const products = {{ products_json | safe }};
+
+function selectProduct(key, element) {
+
+    document.querySelectorAll('.product')
+        .forEach(x => x.classList.remove('active'));
+
+    element.classList.add('active');
+
+    document.getElementById('orderForm')
+        .classList.remove('hidden');
+
+    document.getElementById('product_t
+17:05
+ype')
+        .value = key;
+
+    document.getElementById('productHeading')
+        .innerText = products[key].name;
+
+    const container =
+        document.getElementById('dynamicFields');
+
+    container.innerHTML = "";
+
+    products[key].fields.forEach(field => {
+
+        const name = field[0];
+        const label = field[1];
+        const type = field[2];
+        const required = field[3];
+
+        const div = document.createElement('div');
+
+        div.className =
+            type === "textarea"
+            ? "field full"
+            : "field";
+
+        let html =
+            `<label>${label}`;
+
+        if (required) {
+            html += ` <span class="required">*</span>`;
+        }
+
+        html += `</label>`;
+
+        if (type === "textarea") {
+
+            html += `
+            <textarea
+                name="${name}"
+                ${required ? "required" : ""}
+                placeholder="${label}"></textarea>
+            `;
+
+        } else if (type === "select") {
+
+            html += `
+            <select
+                name="${name}"
+                ${required ? "required" : ""}>
+
+                <option value="">Выберите вариант</option>
+                <option value="Сквозная высечка">
+                    Сквозная высечка
+                </option>
+
+                <option value="Надсечка">
+                    Надсечка
+                </option>
+
+                <option value="Вырубка с перфорацией">
+                    Вырубка с перфорацией
+                </option>
+
+            </select>
+            `;
+
+        } else {
+
+            html += `
+            <input
+                type="${type}"
+                name="${name}"
+                ${required ? "required" : ""}
+                ${type === "file" ? 'accept=".pdf,.jpg,.jpeg,.png,.dxf,.dwg,.step,.stp"' : ""}
+                placeholder="${label}">
+            `;
+
+        }
+
+        div.innerHTML = html;
+
+        container.appendChild(div);
+
+    });
+
+    window.scrollTo({
+        top: document.getElementById('orderForm').offsetTop - 20,
+        behavior: "smooth"
+    });
+}
+
+</script>
+
+{% endblock %}
+"""
+
+
+ORDERS = """
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="card">
+
+<h1>Заявки</h1>
+
+{% if orders %}
+
+<div class="order-list">
+
+{% for order in orders %}
+
+<div class="order">
+
+<div>
+
+<strong>{{ order.order_number }}</strong>
+
+<br>
+
+<span class="badge">
+{{ order.product_name }}
+</span>
+
+<br>
+
+<small>
+{{ order.created_at }}
+</small>
+
+</div>
+
+<div class="actions">
+
+<a href="/order/{{ order.id
+ }}">
+<button class="btn-secondary">
+Открыть
+</button>
+</a>
+
+</div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+{% else %}
+
+<p>
+Заявок пока нет.
+</p>
+
+{% endif %}
+
+</div>
+
+{% endblock %}
+"""
+
+
+DETAIL = """
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="card">
+
+<h1>Заявка {{ order.order_number }}</h1>
+
+<p>
+<strong>Тип:</strong> {{ order.product_name }}
+</p>
+
+<p>
+<strong>Дата:</strong> {{ order.created_at }}
+</p>
+
+{% if order.client %}
+<p>
+<strong>Компания:</strong> {{ order.client }}
+</p>
+{% endif %}
+
+{% if order.contact
+ %}
+<p>
+<strong>Контакт:</strong> {{ order.contact
+ }}
+</p>
+{% endif %}
+
+<hr>
+
+<h2>Технические данные</h2>
+
+{% for key, value in data.items() %}
+
+{% if value %}
+
+<p>
+<strong>{{ labels.get(key, key) }}:</strong>
+
+{% if value is string and value.startswith('/uploads/') %}
+
+<br>
+<a href="{{ value }}" target="_blank">
+Открыть файл
+</a>
+
+{% else %}
+
+{{ value }}
+
+{% endif %}
+
+</p>
+
+{% endif %}
+
+{% endfor %}
+
+{% if order.comment %}
+
+<hr>
+
+<h2>Комментарий</h2>
+
+<p>
+{{ order.comment }}
+</p>
+
+{% endif %}
+
+<br>
+
+<button onclick="window.print()"
+        class="btn-primary">
+
+Печать / Сохранить PDF
+
+</button>
+
+<a href="/orders">
+<button class="btn-secondary">
+Назад
+</button>
+</a>
+
+</div>
+
+{% endblock %}
+"""
+
+
+from jinja2 import DictLoader
+import json
+
+
+app.jinja_loader = DictLoader({
+    "base.html": HTML.replace("{% block content %}{% endblock %}", "{% block content %}{% endblock %}"),
+    "index.html": INDEX,
+    "orders.html": ORDERS,
+    "detail.html": D
+order.id order.id – Domain name for sale order.id Domain Enquiry
+17:05
+ETAIL
+})
+
+
+@app.route("/")
+def index():
+
+    products_json = json.dumps(PRODUCTS, ensure_ascii=False)
+
+    return render_template_string(
+        INDEX,
+        products=PRODUCTS,
+        products_json=products_json
+    )
+
+
+@app.route("/create", methods=["POST"])
+def create():
+
+    product_type = request.form.get("product_type")
+
+    if product_type not in PRODUCTS:
+        flash("Не выбран тип оснастки.")
+        return redirect(url_for("index"))
+
+    product = PRODUCTS[product_type]
+
+    data = {}
+
+    for field in product["fields"]:
+
+        name = field[0]
+        label = field[1]
+        field_type = field[2]
+
+        if field_type == "file":
+
+            file = request.files.get(name)
+
+            if file and file.filename:
+
+                extension = os.path.splitext(file.filename)[1].lower()
+
+                filename = (
+                    str(uuid.uuid4())
+                    + extension
+                )
+
+                filepath = os.path.join(
+                    UPLOAD_DIR,
+                    filename
+                )
+
+                file.save
+(filepath)
+
+                data[name] = "/uploads/" + filename
+
+        else:
+
+            value = request.form.get(name, "").strip()
+
+            if value:
+                data[name] = value
+
+    import json
+
+    conn = db()
+
+    now = datetime.now
+().strftime("%d.%m.%Y %H:%M")
+
+    cursor = conn.execute("""
+        INSERT INTO orders
+        (
+            order_number,
+            product_type,
+            product_name,
+            client,
+            contact,
+            comment,
+            data,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        "TP-" + datetime.now
+().strftime("%Y%m%d") + "-" + str(uuid.uuid4())[:6].upper(),
+        product_type,
+        product["name"],
+        request.form.get("client", ""),
+        request.form.get("contact", ""),
+        request.form.get("comment", ""),
+        json.dumps(data, ensure_ascii=False),
+        now
+    ))
+
+    order_id = cursor.lastrowid
+
+    conn.commit()
+    conn.close()
+
+    flash("Заявка успешно создана.")
+
+    return redirect(
+        url_for("order_detail", order_id=order_id)
+    )
+
+
+@app.route("/orders")
+def orders():
+
+    conn = db()
+
+    orders = conn.execute("""
+        SELECT *
+        FROM orders
+        ORDER BY id DESC
+    """).fetchall()
+
+    conn.close()
+
+    return render_template_string(
+        ORDERS,
+        orders=orders
+    )
+
+
+@app.route("/order/<int:order_id>")
+def order_detail(order_id):
+
+    import json
+
+    conn = db()
+
+    order = conn.execute(
+        "SELECT * FROM orders WHERE id = ?",
+        (order_id,)
+    ).fetchone()
+
+    conn.close()
+
+    if not order:
+        return "Заявка не найдена", 404
+
+    data = json.loads(order["data"])
+
+    labels = {}
+
+    for product in PRODUCTS.values():
+        for field in product["fields"]:
+            labels[field[0]] = field[1]
+
+    return render_template_string(
+        DETAIL,
+        order=order,
+        data=data,
+        labels=labels
+    )
+
+
+@app.route("/uploads/<filename>")
+def uploads(filename):
+
+    return send_from_directory(
+        UPLOAD_DIR,
+        filename
+    )
+
+
+if __name__ == "__main__":
+
+    port = int(os.environ.get("PORT", 5000))
+
+    app.run
+(
+        host="0.0.0.0
+",
+        port=port,
+        debug=False
+    )
+17:05
+Сегодня
+
