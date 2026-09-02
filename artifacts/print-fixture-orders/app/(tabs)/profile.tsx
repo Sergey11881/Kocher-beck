@@ -3,6 +3,7 @@ import { useGetOrders } from '@workspace/api-client-react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDrafts } from '@/context/OrdersContext';
+import { CreatorCredit } from '@/components/CreatorCredit';
 import { useColors } from '@/hooks/useColors';
 
 export default function ProfileScreen() {
@@ -48,6 +49,7 @@ export default function ProfileScreen() {
         <Feather name="shield" size={18} color={colors.secondaryForeground} />
         <Text style={[styles.noteText, { color: colors.secondaryForeground }]}>Черновики хранятся только на этом устройстве. Отправленные заявки доступны типографии на сервере.</Text>
       </View>
+      <CreatorCredit />
     </ScrollView>
   );
 }

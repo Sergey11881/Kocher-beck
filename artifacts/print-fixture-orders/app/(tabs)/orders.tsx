@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OrderCard } from '@/components/OrderCard';
+import { CreatorCredit } from '@/components/CreatorCredit';
 import { useColors } from '@/hooks/useColors';
 
 export default function OrdersScreen() {
@@ -59,6 +60,7 @@ export default function OrdersScreen() {
           </View>
         )}
       </View>
+      <CreatorCredit />
     </ScrollView>
   );
 }

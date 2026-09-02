@@ -4,21 +4,21 @@
     "slug": "print-fixture-orders",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/company-logo.png",
     "scheme": "print-fixture-orders",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/company-logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#f7f4ee"
+      "backgroundColor": "#080808"
     },
     "ios": {
       "supportsTablet": false
     },
     "android": {},
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/company-logo.png"
     },
     "plugins": [
       [

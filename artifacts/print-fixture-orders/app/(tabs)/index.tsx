@@ -1,9 +1,10 @@
 import { Feather } from '@expo/vector-icons';
 import { getGetOrdersQueryKey, useGetOrders } from '@workspace/api-client-react';
 import { router } from 'expo-router';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OrderCard } from '@/components/OrderCard';
+import { CreatorCredit } from '@/components/CreatorCredit';
 import { useColors } from '@/hooks/useColors';
 
 export default function HomeScreen() {
@@ -25,9 +26,7 @@ export default function HomeScreen() {
           <Text style={[styles.eyebrow, { color: colors.primary }]}>ТИПОГРАФСКАЯ ОСНАСТКА</Text>
           <Text style={[styles.greeting, { color: colors.foreground }]}>Новая заявка</Text>
         </View>
-        <View style={[styles.logo, { backgroundColor: colors.foreground }]}>
-          <Feather name="layers" size={19} color={colors.background} />
-        </View>
+        <Image source={require('@/assets/images/company-logo.png')} style={styles.logo} resizeMode="cover" />
       </View>
 
       <View style={[styles.hero, { backgroundColor: colors.foreground }]}>
@@ -81,6 +80,7 @@ export default function HomeScreen() {
           </Text>
         </View>
       )}
+      <CreatorCredit />
     </ScrollView>
   );
 }
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 },
   eyebrow: { fontSize: 10, letterSpacing: 1.4, fontFamily: 'Inter_700Bold', marginBottom: 5 },
   greeting: { fontSize: 26, lineHeight: 32, fontFamily: 'Inter_700Bold' },
-  logo: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 52, height: 52, borderRadius: 15 },
   hero: { marginHorizontal: 20, borderRadius: 24, overflow: 'hidden', minHeight: 284 },
   heroContent: { padding: 24, zIndex: 1, maxWidth: 310 },
   heroKicker: { fontSize: 12, fontFamily: 'Inter_700Bold', letterSpacing: 1.1, marginBottom: 14 },

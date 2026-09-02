@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
+import { CreatorCredit } from '@/components/CreatorCredit';
 
 export default function OrderDetailsScreen() {
   const colors = useColors();
@@ -87,6 +88,7 @@ export default function OrderDetailsScreen() {
           <Feather name="info" size={16} color={colors.primary} />
           <Text style={[styles.infoText, { color: colors.mutedForeground }]}>Менеджер свяжется с вами, чтобы подтвердить детали и сроки изготовления.</Text>
         </View>
+        <CreatorCredit />
       </View>
     </ScrollView>
   );
