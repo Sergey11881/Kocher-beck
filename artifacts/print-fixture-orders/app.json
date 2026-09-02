@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Заявки на типографскую оснастку",
-    "slug": "print-fixture-orders",
+    "name": "Kocher+Beck Smart Order",
+    "slug": "kocher-beck-smart-order",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/company-logo-icon.png",
-    "scheme": "print-fixture-orders",
+    "scheme": "kocher-beck-smart-order",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {

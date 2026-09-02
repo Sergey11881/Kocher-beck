@@ -22,8 +22,8 @@ export default function HomeScreen() {
     >
       <View style={styles.header}>
         <View>
-          <Text style={[styles.eyebrow, { color: colors.primary }]}>ТИПОГРАФСКАЯ ОСНАСТКА</Text>
-          <Text style={[styles.greeting, { color: colors.foreground }]}>Новая заявка</Text>
+          <Text style={[styles.eyebrow, { color: colors.primary }]}>KOCHER+BECK SMART ORDER</Text>
+          <Text style={[styles.greeting, { color: colors.foreground }]}>Оформление заказа</Text>
         </View>
         <Image source={require('@/assets/images/company-logo.png')} style={styles.logo} resizeMode="contain" />
       </View>
@@ -33,9 +33,9 @@ export default function HomeScreen() {
         <View style={[styles.heroCircleSmall, { backgroundColor: colors.primary }]} />
         <View style={styles.heroContent}>
           <Text style={[styles.heroKicker, { color: colors.primary }]}>Шаг за шагом</Text>
-          <Text style={[styles.heroTitle, { color: colors.background }]}>Соберите заказ без лишних звонков</Text>
+          <Text style={[styles.heroTitle, { color: colors.background }]}>Точный заказ с первого раза</Text>
           <Text style={[styles.heroBody, { color: colors.secondary }]}>
-            Укажите параметры оснастки — мы подготовим точное предложение.
+            Передайте все параметры оснастки команде Kocher+Beck в одной заявке.
           </Text>
           <Pressable
             testID="new-order-button"
