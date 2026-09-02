@@ -30,6 +30,7 @@ PRODUCTS = {
             ("cylinder_id", "ID номер цилиндра Kocher+Beck / аналог другого Z", "text", False),
             ("drawing", "Чертёж магнитного цилиндра и шестерни с линейными размерами", "file", True),
             ("teeth", "Количество зубьев / Z", "number", True),
+            ("tooth_module", "Модуль зуба", "number", True),
             ("repeat", "Раппорт", "text", True),
             ("cylinder_count", "Количество цилиндров каждого раппорта", "number", True),
         ],
