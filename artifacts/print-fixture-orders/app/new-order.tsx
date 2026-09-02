@@ -1,104 +1,254 @@
+import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
+import {
+  FieldDefinition,
+  ProductDefinition,
+  getGetProductsQueryKey,
+  getGetOrdersQueryKey,
+  useCreateOrder,
+  useGetProducts,
+} from '@workspace/api-client-react';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
-import { OrderDraft, useOrders } from '@/context/OrdersContext';
+import { useDrafts } from '@/context/OrdersContext';
 import { useColors } from '@/hooks/useColors';
 
-const initialDraft: OrderDraft = {
-  title: '',
-  company: '',
-  contactName: '',
-  contactPhone: '',
-  productType: '',
-  quantity: '',
-  material: '',
-  dimensions: '',
-  printMethod: '',
-  colors: '',
-  deadline: '',
-  notes: '',
-};
+type PickedFile = { uri: string; name: string; mimeType?: string };
+type Step = 0 | 1 | 2;
 
-const steps = ['Заказ', 'Параметры', 'Контакты'];
-
-function Field({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  multiline = false,
-  keyboardType = 'default',
-  colors,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder: string;
-  multiline?: boolean;
-  keyboardType?: 'default' | 'phone-pad' | 'numeric';
-  colors: ReturnType<typeof useColors>;
-}) {
-  return (
-    <View style={styles.fieldWrap}>
-      <Text style={[styles.label, { color: colors.foreground }]}>{label}</Text>
-      <TextInput
-        testID={`input-${label}`}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.mutedForeground}
-        keyboardType={keyboardType}
-        multiline={multiline}
-        textAlignVertical={multiline ? 'top' : 'center'}
-        style={[
-          styles.input,
-          { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.input },
-          multiline && styles.textarea,
-        ]}
-      />
-    </View>
-  );
-}
+const steps = ['Оснастка', 'Параметры', 'Контакты'];
 
 function haptic() {
   if (Platform.OS !== 'web') void Haptics.selectionAsync();
 }
 
+function FieldInput({
+  field,
+  value,
+  file,
+  onChange,
+  onPickFile,
+  colors,
+}: {
+  field: FieldDefinition;
+  value: string;
+  file?: PickedFile;
+  onChange: (value: string) => void;
+  onPickFile: () => void;
+  colors: ReturnType<typeof useColors>;
+}) {
+  const isFile = field.type === 'file';
+  const isMultiline = field.type === 'textarea';
+
+  return (
+    <View style={styles.fieldWrap}>
+      <Text style={[styles.label, { color: colors.foreground }]}>
+        {field.label}
+        {field.required ? ' *' : ''}
+      </Text>
+      {isFile ? (
+        <Pressable
+          testID={`field-${field.key}`}
+          onPress={onPickFile}
+          style={({ pressed }) => [
+            styles.fileField,
+            { backgroundColor: colors.card, borderColor: file ? colors.primary : colors.input, opacity: pressed ? 0.78 : 1 },
+          ]}
+        >
+          <View style={[styles.fileIcon, { backgroundColor: colors.secondary }]}>
+            <Feather name={file ? 'check' : 'paperclip'} size={18} color={file ? colors.primary : colors.secondaryForeground} />
+          </View>
+          <View style={styles.fileCopy}>
+            <Text numberOfLines={1} style={[styles.fileTitle, { color: colors.foreground }]}>
+              {file ? file.name : 'Прикрепить файл'}
+            </Text>
+            <Text style={[styles.fileHint, { color: colors.mutedForeground }]}>
+              {file ? 'Файл выбран' : 'Фото, PDF, DXF, DWG или STEP'}
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={17} color={colors.mutedForeground} />
+        </Pressable>
+      ) : field.type === 'select' ? (
+        <View style={styles.options}>
+          {(field.options ?? []).map((option) => (
+            <Pressable
+              key={option}
+              testID={`option-${field.key}-${option}`}
+              onPress={() => onChange(option)}
+              style={({ pressed }) => [
+                styles.option,
+                {
+                  backgroundColor: value === option ? colors.primary : colors.card,
+                  borderColor: value === option ? colors.primary : colors.input,
+                  opacity: pressed ? 0.78 : 1,
+                },
+              ]}
+            >
+              <Text style={[styles.optionText, { color: value === option ? colors.primaryForeground : colors.foreground }]}>{option}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : (
+        <TextInput
+          testID={`field-${field.key}`}
+          value={value}
+          onChangeText={onChange}
+          placeholder={field.label}
+          placeholderTextColor={colors.mutedForeground}
+          keyboardType={field.type === 'number' ? 'numeric' : 'default'}
+          multiline={isMultiline}
+          textAlignVertical={isMultiline ? 'top' : 'center'}
+          style={[
+            styles.input,
+            { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.input },
+            isMultiline && styles.textarea,
+          ]}
+        />
+      )}
+    </View>
+  );
+}
+
+function ProductCard({
+  product,
+  selected,
+  onPress,
+  colors,
+}: {
+  product: ProductDefinition;
+  selected: boolean;
+  onPress: () => void;
+  colors: ReturnType<typeof useColors>;
+}) {
+  return (
+    <Pressable
+      testID={`product-${product.key}`}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.productCard,
+        {
+          backgroundColor: selected ? colors.foreground : colors.card,
+          borderColor: selected ? colors.primary : colors.border,
+          opacity: pressed ? 0.8 : 1,
+        },
+      ]}
+    >
+      <View style={[styles.productIcon, { backgroundColor: selected ? colors.primary : colors.secondary }]}>
+        <Feather name="box" size={19} color={selected ? colors.primaryForeground : colors.secondaryForeground} />
+      </View>
+      <Text style={[styles.productName, { color: selected ? colors.background : colors.cardForeground }]}>{product.name}</Text>
+      <Text style={[styles.productMeta, { color: selected ? colors.secondary : colors.mutedForeground }]}>
+        {product.fields.length} {product.fields.length === 1 ? 'параметр' : 'параметров'}
+      </Text>
+      {selected ? <Feather name="check-circle" size={19} color={colors.primary} style={styles.selectedIcon} /> : null}
+    </Pressable>
+  );
+}
+
 export default function NewOrderScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { saveOrder } = useOrders();
-  const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<OrderDraft>(initialDraft);
-  const [isSaving, setIsSaving] = useState(false);
+  const queryClient = useQueryClient();
+  const { saveDraft } = useDrafts();
+  const productsQuery = useGetProducts({ query: { queryKey: getGetProductsQueryKey(), staleTime: 300_000 } });
+  const createOrder = useCreateOrder();
+  const [step, setStep] = useState<Step>(0);
+  const [selectedKey, setSelectedKey] = useState('');
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [files, setFiles] = useState<Record<string, PickedFile>>({});
+  const [client, setClient] = useState('');
+  const [contact, setContact] = useState('');
+  const [comment, setComment] = useState('');
 
-  const update = (key: keyof OrderDraft) => (value: string) => setDraft((current) => ({ ...current, [key]: value }));
-  const isLastStep = step === steps.length - 1;
+  const products = productsQuery.data ?? [];
+  const selectedProduct = products.find((product) => product.key === selectedKey);
   const progress = useMemo(() => `${((step + 1) / steps.length) * 100}%` as `${number}%`, [step]);
+  const isSaving = createOrder.isPending;
+
+  const selectProduct = (product: ProductDefinition) => {
+    setSelectedKey(product.key);
+    setValues({});
+    setFiles({});
+    haptic();
+  };
+
+  const updateValue = (key: string, value: string) => setValues((current) => ({ ...current, [key]: value }));
+
+  const pickFile = async (fieldKey: string) => {
+    const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      setFiles((current) => ({
+        ...current,
+        [fieldKey]: { uri: asset.uri, name: asset.name ?? 'Прикреплённый файл', mimeType: asset.mimeType },
+      }));
+      haptic();
+    }
+  };
 
   const validateStep = () => {
-    if (step === 0 && !draft.productType.trim()) return 'Укажите тип оснастки.';
-    if (step === 0 && !draft.quantity.trim()) return 'Укажите тираж.';
-    if (step === 1 && !draft.dimensions.trim()) return 'Укажите размеры или формат.';
-    if (step === 2 && !draft.contactName.trim()) return 'Укажите контактное лицо.';
-    if (step === 2 && !draft.contactPhone.trim()) return 'Укажите телефон для связи.';
+    if (step === 0 && !selectedProduct) return 'Выберите тип оснастки.';
+    if (step === 1 && selectedProduct) {
+      const missing = selectedProduct.fields.find((field) => {
+        if (!field.required) return false;
+        return field.type === 'file' ? !files[field.key] : !values[field.key]?.trim();
+      });
+      if (missing) return `Заполните поле «${missing.label}».`;
+    }
+    if (step === 2 && !contact.trim()) return 'Укажите контактное лицо.';
     return undefined;
   };
 
-  const save = async (status: 'draft' | 'submitted') => {
-    setIsSaving(true);
+  const saveAsDraft = async () => {
+    if (!selectedProduct) {
+      Alert.alert('Выберите оснастку', 'Сначала укажите тип изделия для черновика.');
+      return;
+    }
     try {
-      const order = await saveOrder(draft, status);
+      await saveDraft({
+        productType: selectedProduct.name,
+        client,
+        contact,
+        comment,
+        data: values,
+        fileNames: Object.values(files).map((file) => file.name),
+      });
+      haptic();
+      Alert.alert('Черновик сохранён', 'Вы сможете вернуться к нему позже на этом устройстве.');
+      router.back();
+    } catch {
+      Alert.alert('Не удалось сохранить', 'Попробуйте ещё раз.');
+    }
+  };
+
+  const submit = async () => {
+    if (!selectedProduct) return;
+    const data = JSON.stringify({ ...values, __file_fields: Object.keys(files) });
+    const body = {
+      product_type: selectedProduct.key,
+      client,
+      contact,
+      comment,
+      data,
+      files: Object.values(files).map((file) => ({
+        uri: file.uri,
+        name: file.name,
+        type: file.mimeType ?? 'application/octet-stream',
+      })) as unknown as Blob[],
+    };
+
+    try {
+      const order = await createOrder.mutateAsync({ data: body });
+      await queryClient.invalidateQueries({ queryKey: getGetOrdersQueryKey() });
       haptic();
       router.replace(`/order/${order.id}`);
     } catch {
-      Alert.alert('Не удалось сохранить', 'Проверьте свободное место на устройстве и попробуйте ещё раз.');
-    } finally {
-      setIsSaving(false);
+      Alert.alert('Не удалось отправить заявку', 'Проверьте соединение с сервером и попробуйте ещё раз.');
     }
   };
 
@@ -108,11 +258,11 @@ export default function NewOrderScreen() {
       Alert.alert('Нужно уточнить', error);
       return;
     }
-    haptic();
-    if (isLastStep) {
-      void save('submitted');
+    if (step === 2) {
+      void submit();
     } else {
-      setStep((current) => current + 1);
+      haptic();
+      setStep((current) => (current + 1) as Step);
     }
   };
 
@@ -123,12 +273,7 @@ export default function NewOrderScreen() {
           <Feather name="x" size={22} color={colors.foreground} />
         </Pressable>
         <Text style={[styles.topTitle, { color: colors.foreground }]}>Новая заявка</Text>
-        <Pressable
-          testID="save-draft"
-          onPress={() => void save('draft')}
-          disabled={isSaving}
-          style={({ pressed }) => ({ opacity: pressed || isSaving ? 0.5 : 1, padding: 7 })}
-        >
+        <Pressable testID="save-draft" onPress={() => void saveAsDraft()} disabled={isSaving} style={({ pressed }) => ({ opacity: pressed || isSaving ? 0.5 : 1, padding: 7 })}>
           <Text style={[styles.saveText, { color: colors.primary }]}>Сохранить</Text>
         </Pressable>
       </View>
@@ -144,9 +289,7 @@ export default function NewOrderScreen() {
             {steps.map((item, index) => (
               <View key={item} style={styles.stepItem}>
                 <View style={[styles.stepNumber, { backgroundColor: index <= step ? colors.primary : colors.secondary }]}>
-                  <Text style={[styles.stepNumberText, { color: index <= step ? colors.primaryForeground : colors.mutedForeground }]}>
-                    {index + 1}
-                  </Text>
+                  <Text style={[styles.stepNumberText, { color: index <= step ? colors.primaryForeground : colors.mutedForeground }]}>{index + 1}</Text>
                 </View>
                 <Text style={[styles.stepLabel, { color: index === step ? colors.foreground : colors.mutedForeground }]}>{item}</Text>
               </View>
@@ -160,40 +303,59 @@ export default function NewOrderScreen() {
         <View style={styles.form}>
           {step === 0 ? (
             <>
-              <Text style={[styles.heading, { color: colors.foreground }]}>Расскажите о заказе</Text>
-              <Text style={[styles.description, { color: colors.mutedForeground }]}>
-                Начните с общих данных — их достаточно, чтобы открыть черновик.
-              </Text>
-              <Field label="Название заказа" value={draft.title} onChangeText={update('title')} placeholder="Например, упаковка для каталога" colors={colors} />
-              <Field label="Компания" value={draft.company} onChangeText={update('company')} placeholder="Название вашей компании" colors={colors} />
-              <Field label="Тип оснастки *" value={draft.productType} onChangeText={update('productType')} placeholder="Штамп, вырубка, тиснение..." colors={colors} />
-              <Field label="Тираж *" value={draft.quantity} onChangeText={update('quantity')} placeholder="Например, 5 000" keyboardType="numeric" colors={colors} />
+              <Text style={[styles.heading, { color: colors.foreground }]}>Какую оснастку изготовить?</Text>
+              <Text style={[styles.description, { color: colors.mutedForeground }]}>Выберите тип изделия — дальше покажем только нужные технические поля.</Text>
+              {productsQuery.isLoading ? <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Загружаем каталог...</Text> : null}
+              {productsQuery.isError ? (
+                <View style={[styles.errorBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Feather name="wifi-off" size={20} color={colors.primary} />
+                  <Text style={[styles.errorText, { color: colors.cardForeground }]}>Не удалось загрузить каталог</Text>
+                  <Pressable onPress={() => void productsQuery.refetch()}><Text style={[styles.retryText, { color: colors.primary }]}>Повторить</Text></Pressable>
+                </View>
+              ) : (
+                <View style={styles.productGrid}>
+                  {products.map((product) => (
+                    <ProductCard key={product.key} product={product} selected={selectedKey === product.key} onPress={() => selectProduct(product)} colors={colors} />
+                  ))}
+                </View>
+              )}
             </>
           ) : null}
 
-          {step === 1 ? (
+          {step === 1 && selectedProduct ? (
             <>
-              <Text style={[styles.heading, { color: colors.foreground }]}>Технические параметры</Text>
-              <Text style={[styles.description, { color: colors.mutedForeground }]}>
-                Чем точнее данные, тем быстрее типография сможет подготовить расчёт.
-              </Text>
-              <Field label="Материал" value={draft.material} onChangeText={update('material')} placeholder="Картон, бумага, плёнка..." colors={colors} />
-              <Field label="Размеры или формат *" value={draft.dimensions} onChangeText={update('dimensions')} placeholder="Например, 210 × 297 мм" colors={colors} />
-              <Field label="Способ печати" value={draft.printMethod} onChangeText={update('printMethod')} placeholder="Офсет, цифра, флексо..." colors={colors} />
-              <Field label="Цветность" value={draft.colors} onChangeText={update('colors')} placeholder="4+0, 4+4, Pantone..." colors={colors} />
+              <Text style={[styles.heading, { color: colors.foreground }]}>{selectedProduct.name}</Text>
+              <Text style={[styles.description, { color: colors.mutedForeground }]}>Заполните обязательные поля и прикрепите материалы для точного расчёта.</Text>
+              {selectedProduct.fields.map((field) => (
+                <FieldInput
+                  key={field.key}
+                  field={field}
+                  value={values[field.key] ?? ''}
+                  file={files[field.key]}
+                  onChange={(value) => updateValue(field.key, value)}
+                  onPickFile={() => void pickFile(field.key)}
+                  colors={colors}
+                />
+              ))}
             </>
           ) : null}
 
           {step === 2 ? (
             <>
-              <Text style={[styles.heading, { color: colors.foreground }]}>Как с вами связаться</Text>
-              <Text style={[styles.description, { color: colors.mutedForeground }]}>
-                Эти данные увидит менеджер типографии, чтобы уточнить детали заказа.
-              </Text>
-              <Field label="Контактное лицо *" value={draft.contactName} onChangeText={update('contactName')} placeholder="Имя и фамилия" colors={colors} />
-              <Field label="Телефон *" value={draft.contactPhone} onChangeText={update('contactPhone')} placeholder="+7 900 000-00-00" keyboardType="phone-pad" colors={colors} />
-              <Field label="Желаемый срок" value={draft.deadline} onChangeText={update('deadline')} placeholder="Например, до 20 сентября" colors={colors} />
-              <Field label="Комментарий" value={draft.notes} onChangeText={update('notes')} placeholder="Особые пожелания или ссылки на макеты" multiline colors={colors} />
+              <Text style={[styles.heading, { color: colors.foreground }]}>Контактные данные</Text>
+              <Text style={[styles.description, { color: colors.mutedForeground }]}>Менеджер типографии свяжется с вами, чтобы подтвердить параметры заказа.</Text>
+              <View style={styles.fieldWrap}>
+                <Text style={[styles.label, { color: colors.foreground }]}>Компания / заказчик</Text>
+                <TextInput value={client} onChangeText={setClient} placeholder="Название компании" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.input }]} />
+              </View>
+              <View style={styles.fieldWrap}>
+                <Text style={[styles.label, { color: colors.foreground }]}>Контактное лицо *</Text>
+                <TextInput testID="contact-name" value={contact} onChangeText={setContact} placeholder="ФИО" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.input }]} />
+              </View>
+              <View style={styles.fieldWrap}>
+                <Text style={[styles.label, { color: colors.foreground }]}>Комментарий</Text>
+                <TextInput value={comment} onChangeText={setComment} placeholder="Особые требования или комментарии инженера" placeholderTextColor={colors.mutedForeground} multiline textAlignVertical="top" style={[styles.input, styles.textarea, { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.input }]} />
+              </View>
             </>
           ) : null}
         </View>
@@ -201,21 +363,14 @@ export default function NewOrderScreen() {
 
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12, backgroundColor: colors.background, borderTopColor: colors.border }]}>
         {step > 0 ? (
-          <Pressable testID="previous-step" onPress={() => setStep((current) => current - 1)} style={styles.backButton}>
+          <Pressable testID="previous-step" onPress={() => setStep((current) => (current - 1) as Step)} style={styles.backButton}>
             <Feather name="arrow-left" size={18} color={colors.foreground} />
             <Text style={[styles.backText, { color: colors.foreground }]}>Назад</Text>
           </Pressable>
-        ) : (
-          <View />
-        )}
-        <Pressable
-          testID="next-step"
-          onPress={goNext}
-          disabled={isSaving}
-          style={({ pressed }) => [styles.nextButton, { backgroundColor: colors.primary, opacity: pressed || isSaving ? 0.65 : 1 }]}
-        >
-          <Text style={[styles.nextText, { color: colors.primaryForeground }]}>{isLastStep ? 'Отправить заявку' : 'Продолжить'}</Text>
-          <Feather name={isLastStep ? 'send' : 'arrow-right'} size={17} color={colors.primaryForeground} />
+        ) : <View />}
+        <Pressable testID="next-step" onPress={goNext} disabled={isSaving} style={({ pressed }) => [styles.nextButton, { backgroundColor: colors.primary, opacity: pressed || isSaving ? 0.65 : 1 }]}>
+          <Text style={[styles.nextText, { color: colors.primaryForeground }]}>{step === 2 ? 'Отправить заявку' : 'Продолжить'}</Text>
+          <Feather name={step === 2 ? 'send' : 'arrow-right'} size={17} color={colors.primaryForeground} />
         </Pressable>
       </View>
     </View>
@@ -238,11 +393,29 @@ const styles = StyleSheet.create({
   progressFill: { height: 4, borderRadius: 2 },
   form: { paddingHorizontal: 20, paddingTop: 31 },
   heading: { fontSize: 24, lineHeight: 30, fontFamily: 'Inter_700Bold', marginBottom: 8 },
-  description: { fontSize: 13, lineHeight: 19, fontFamily: 'Inter_400Regular', marginBottom: 26, maxWidth: 330 },
+  description: { fontSize: 13, lineHeight: 19, fontFamily: 'Inter_400Regular', marginBottom: 26, maxWidth: 340 },
+  loadingText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
+  errorBox: { borderWidth: 1, borderRadius: 16, padding: 17, gap: 11 },
+  errorText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  retryText: { fontSize: 12, fontFamily: 'Inter_700Bold' },
+  productGrid: { gap: 12 },
+  productCard: { minHeight: 112, borderRadius: 18, borderWidth: 1, padding: 16, position: 'relative' },
+  productIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  productName: { fontSize: 15, lineHeight: 19, fontFamily: 'Inter_600SemiBold', paddingRight: 30 },
+  productMeta: { fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 5 },
+  selectedIcon: { position: 'absolute', right: 16, top: 18 },
   fieldWrap: { marginBottom: 18 },
   label: { fontSize: 12, fontFamily: 'Inter_600SemiBold', marginBottom: 8 },
   input: { minHeight: 50, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, fontSize: 14, fontFamily: 'Inter_400Regular' },
-  textarea: { minHeight: 104, paddingTop: 14 },
+  textarea: { minHeight: 108, paddingTop: 14 },
+  fileField: { minHeight: 67, borderWidth: 1, borderRadius: 14, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  fileIcon: { width: 42, height: 42, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  fileCopy: { flex: 1 },
+  fileTitle: { fontSize: 13, fontFamily: 'Inter_600SemiBold', marginBottom: 4 },
+  fileHint: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  option: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
+  optionText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   bottomBar: { minHeight: 72, paddingHorizontal: 20, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   backButton: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
   backText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },

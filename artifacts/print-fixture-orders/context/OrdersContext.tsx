@@ -1,105 +1,68 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 
-export type OrderStatus = 'draft' | 'submitted';
-
-export interface OrderDraft {
-  title: string;
-  company: string;
-  contactName: string;
-  contactPhone: string;
-  productType: string;
-  quantity: string;
-  material: string;
-  dimensions: string;
-  printMethod: string;
-  colors: string;
-  deadline: string;
-  notes: string;
-}
-
-export interface Order extends Omit<OrderDraft, 'quantity'> {
+export interface LocalDraft {
   id: string;
-  quantity: number;
-  status: OrderStatus;
-  createdAt: string;
+  productType: string;
+  client: string;
+  contact: string;
+  comment: string;
+  data: Record<string, string>;
+  fileNames: string[];
   updatedAt: string;
 }
 
-interface OrdersContextValue {
-  orders: Order[];
+interface DraftInput extends Omit<LocalDraft, 'id' | 'updatedAt'> {}
+
+interface DraftsContextValue {
+  drafts: LocalDraft[];
   isLoading: boolean;
-  saveOrder: (draft: OrderDraft, status: OrderStatus, existingId?: string) => Promise<Order>;
-  getOrder: (id: string) => Order | undefined;
+  saveDraft: (draft: DraftInput) => Promise<LocalDraft>;
 }
 
-const OrdersContext = createContext<OrdersContextValue | null>(null);
-const STORAGE_KEY = '@print-fixture-orders/orders';
+const DraftsContext = createContext<DraftsContextValue | null>(null);
+const STORAGE_KEY = '@print-fixture-orders/drafts';
 
-function createId() {
+function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export function OrdersProvider({ children }: { children: ReactNode }) {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [drafts, setDrafts] = useState<LocalDraft[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
+    let active = true;
     AsyncStorage.getItem(STORAGE_KEY)
       .then((stored) => {
-        if (!isMounted || !stored) return;
-        const parsed = JSON.parse(stored) as Order[];
-        if (Array.isArray(parsed)) setOrders(parsed);
+        if (!active || !stored) return;
+        const parsed = JSON.parse(stored) as LocalDraft[];
+        if (Array.isArray(parsed)) setDrafts(parsed);
       })
       .catch(() => undefined)
       .finally(() => {
-        if (isMounted) setIsLoading(false);
+        if (active) setIsLoading(false);
       });
 
     return () => {
-      isMounted = false;
+      active = false;
     };
   }, []);
 
-  const persist = async (nextOrders: Order[]) => {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(nextOrders));
-    setOrders(nextOrders);
+  const saveDraft = async (input: DraftInput) => {
+    const draft: LocalDraft = { ...input, id: makeId(), updatedAt: new Date().toISOString() };
+    const nextDrafts = [draft, ...drafts];
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(nextDrafts));
+    setDrafts(nextDrafts);
+    return draft;
   };
 
-  const saveOrder = async (draft: OrderDraft, status: OrderStatus, existingId?: string) => {
-    const now = new Date().toISOString();
-    const existing = existingId ? orders.find((order) => order.id === existingId) : undefined;
-    const order: Order = {
-      ...draft,
-      id: existing?.id ?? createId(),
-      quantity: Number.parseInt(draft.quantity, 10) || 0,
-      status,
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
-    };
-    const nextOrders = existing
-      ? orders.map((item) => (item.id === existing.id ? order : item))
-      : [order, ...orders];
-    await persist(nextOrders);
-    return order;
-  };
-
-  const value = useMemo(
-    () => ({
-      orders,
-      isLoading,
-      saveOrder,
-      getOrder: (id: string) => orders.find((order) => order.id === id),
-    }),
-    [isLoading, orders],
-  );
-
-  return <OrdersContext.Provider value={value}>{children}</OrdersContext.Provider>;
+  const value = useMemo(() => ({ drafts, isLoading, saveDraft }), [drafts, isLoading]);
+  return <DraftsContext.Provider value={value}>{children}</DraftsContext.Provider>;
 }
 
-export function useOrders() {
-  const context = useContext(OrdersContext);
-  if (!context) throw new Error('useOrders must be used within OrdersProvider');
+export function useDrafts() {
+  const context = useContext(DraftsContext);
+  if (!context) throw new Error('useDrafts must be used within OrdersProvider');
   return context;
 }

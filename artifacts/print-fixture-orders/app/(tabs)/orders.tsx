@@ -1,21 +1,22 @@
 import { Feather } from '@expo/vector-icons';
+import { useGetOrders } from '@workspace/api-client-react';
 import { router } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OrderCard } from '@/components/OrderCard';
-import { useOrders } from '@/context/OrdersContext';
 import { useColors } from '@/hooks/useColors';
 
 export default function OrdersScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { orders, isLoading } = useOrders();
+  const ordersQuery = useGetOrders();
+  const orders = ordersQuery.data ?? [];
 
   return (
     <ScrollView
       style={[styles.screen, { backgroundColor: colors.background }]}
       contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }}
-      refreshControl={<RefreshControl refreshing={isLoading} tintColor={colors.primary} />}
+      refreshControl={<RefreshControl refreshing={ordersQuery.isFetching} onRefresh={() => void ordersQuery.refetch()} tintColor={colors.primary} />}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
@@ -33,26 +34,26 @@ export default function OrdersScreen() {
       </View>
 
       <Text style={[styles.count, { color: colors.mutedForeground }]}>
-        {orders.length === 0 ? 'Пока нет заявок' : `${orders.length} ${orders.length === 1 ? 'заявка' : 'заявок'}`}
+        {ordersQuery.isError ? 'Сервер временно недоступен' : orders.length === 0 ? 'Пока нет заявок' : `${orders.length} ${orders.length === 1 ? 'заявка' : 'заявок'}`}
       </Text>
 
       <View style={styles.list}>
-        {orders.length > 0 ? (
-          orders.map((order) => (
-            <OrderCard key={order.id} order={order} onPress={() => router.push(`/order/${order.id}`)} />
-          ))
+        {ordersQuery.isError ? (
+          <View style={[styles.empty, { borderColor: colors.border, backgroundColor: colors.card }]}>
+            <Feather name="wifi-off" size={28} color={colors.primary} />
+            <Text style={[styles.emptyTitle, { color: colors.cardForeground }]}>Не удалось получить заявки</Text>
+            <Pressable onPress={() => void ordersQuery.refetch()} style={[styles.emptyButton, { backgroundColor: colors.secondary }]}>
+              <Text style={[styles.emptyButtonText, { color: colors.secondaryForeground }]}>Повторить</Text>
+            </Pressable>
+          </View>
+        ) : orders.length > 0 ? (
+          orders.map((order) => <OrderCard key={order.id} order={order} onPress={() => router.push(`/order/${order.id}`)} />)
         ) : (
           <View style={[styles.empty, { borderColor: colors.border, backgroundColor: colors.card }]}>
             <Feather name="inbox" size={28} color={colors.primary} />
             <Text style={[styles.emptyTitle, { color: colors.cardForeground }]}>Заявки ещё не создавались</Text>
-            <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
-              Начните с заполнения параметров вашего заказа.
-            </Text>
-            <Pressable
-              testID="empty-create-order"
-              onPress={() => router.push('/new-order')}
-              style={({ pressed }) => [styles.emptyButton, { backgroundColor: colors.secondary, opacity: pressed ? 0.8 : 1 }]}
-            >
+            <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>Начните с заполнения параметров вашего заказа.</Text>
+            <Pressable onPress={() => router.push('/new-order')} style={({ pressed }) => [styles.emptyButton, { backgroundColor: colors.secondary, opacity: pressed ? 0.8 : 1 }]}>
               <Text style={[styles.emptyButtonText, { color: colors.secondaryForeground }]}>Создать заявку</Text>
             </Pressable>
           </View>

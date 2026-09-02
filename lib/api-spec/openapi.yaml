@@ -1,22 +1,24 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 0.2.0
+  description: API for print tooling orders
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: products
+    description: Print tooling catalog
+  - name: orders
+    description: Customer tooling orders
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +26,101 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /products:
+    get:
+      operationId: getProducts
+      tags: [products]
+      summary: List tooling product types and fields
+      responses:
+        "200":
+          description: Product catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductDefinition"
+  /orders:
+    get:
+      operationId: getOrders
+      tags: [orders]
+      summary: List customer orders
+      responses:
+        "200":
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrderSummary"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Create a tooling order
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                product_type:
+                  type: string
+                client:
+                  type: string
+                contact:
+                  type: string
+                comment:
+                  type: string
+                data:
+                  type: string
+                  description: JSON object with product-specific values
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+              required:
+                - product_type
+                - data
+      responses:
+        "201":
+          description: Created order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          description: Invalid order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orders/{order_id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get an order
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +130,90 @@ components:
           type: string
       required:
         - status
-
+    FieldDefinition:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+          enum: [text, file, number, select, textarea]
+        required:
+          type: boolean
+        options:
+          type: array
+          items:
+            type: string
+      required:
+        - key
+        - label
+        - type
+        - required
+    ProductDefinition:
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldDefinition"
+      required:
+        - key
+        - name
+        - fields
+    OrderSummary:
+      type: object
+      properties:
+        id:
+          type: number
+        order_number:
+          type: string
+        product_type:
+          type: string
+        product_name:
+          type: string
+        client:
+          type: string
+        contact:
+          type: string
+        comment:
+          type: string
+        created_at:
+          type: string
+      required:
+        - id
+        - order_number
+        - product_type
+        - product_name
+        - client
+        - contact
+        - comment
+        - created_at
+    Order:
+      allOf:
+        - $ref: "#/components/schemas/OrderSummary"
+        - type: object
+          properties:
+            data:
+              type: object
+              additionalProperties:
+                type: string
+            files:
+              type: array
+              items:
+                type: string
+          required:
+            - data
+            - files
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

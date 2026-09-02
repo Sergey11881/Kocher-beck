@@ -1,14 +1,16 @@
 import { Feather } from '@expo/vector-icons';
+import { useGetOrders } from '@workspace/api-client-react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useOrders } from '@/context/OrdersContext';
+import { useDrafts } from '@/context/OrdersContext';
 import { useColors } from '@/hooks/useColors';
 
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { orders } = useOrders();
-  const submitted = orders.filter((order) => order.status === 'submitted').length;
+  const ordersQuery = useGetOrders();
+  const { drafts } = useDrafts();
+  const orders = ordersQuery.data ?? [];
 
   return (
     <ScrollView
@@ -18,9 +20,7 @@ export default function ProfileScreen() {
     >
       <Text style={[styles.eyebrow, { color: colors.primary }]}>НАСТРОЙКИ</Text>
       <Text style={[styles.title, { color: colors.foreground }]}>Профиль</Text>
-      <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-        Данные для связи можно будет добавить перед отправкой заявки.
-      </Text>
+      <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Данные для связи можно будет добавить перед отправкой заявки.</Text>
 
       <View style={[styles.profileCard, { backgroundColor: colors.foreground }]}>
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
@@ -36,19 +36,17 @@ export default function ProfileScreen() {
       <View style={styles.stats}>
         <View style={[styles.stat, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.statNumber, { color: colors.foreground }]}>{orders.length}</Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>всего заявок</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>отправлено</Text>
         </View>
         <View style={[styles.stat, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.statNumber, { color: colors.foreground }]}>{submitted}</Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>отправлено</Text>
+          <Text style={[styles.statNumber, { color: colors.foreground }]}>{drafts.length}</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>черновиков</Text>
         </View>
       </View>
 
       <View style={[styles.note, { backgroundColor: colors.secondary }]}>
         <Feather name="shield" size={18} color={colors.secondaryForeground} />
-        <Text style={[styles.noteText, { color: colors.secondaryForeground }]}>
-          Черновики хранятся только на этом устройстве, пока вы не отправите заявку.
-        </Text>
+        <Text style={[styles.noteText, { color: colors.secondaryForeground }]}>Черновики хранятся только на этом устройстве. Отправленные заявки доступны типографии на сервере.</Text>
       </View>
     </ScrollView>
   );
