@@ -1,1 +1,2 @@
 - [Orval and Zod compatibility](orval-zod-compat.md) — generated integer and multipart schemas need workspace-specific Zod and DOM compatibility handling.
+- [Expo animated splash](expo-animated-splash.md) — native splash is static; run a timed full-screen overlay for animated launch branding.

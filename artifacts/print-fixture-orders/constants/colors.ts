@@ -18,6 +18,10 @@ const colors = {
     destructiveForeground: '#ffffff',
     border: '#e5e5e5',
     input: '#d0d0d0',
+    metalDark: '#69737d',
+    metalLight: '#f7fafc',
+    metalMid: '#adb7c0',
+    metalHighlight: '#ffffff',
   },
   dark: {
     text: '#ffffff',
@@ -38,6 +42,10 @@ const colors = {
     destructiveForeground: '#ffffff',
     border: '#e5e5e5',
     input: '#d0d0d0',
+    metalDark: '#69737d',
+    metalLight: '#f7fafc',
+    metalMid: '#adb7c0',
+    metalHighlight: '#ffffff',
   },
   radius: 8,
 };
