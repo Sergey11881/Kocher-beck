@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Kocher+Beck Smart Order"
+description = "Веб-приложение для оформления заявок на типографскую оснастку: каталог изделий, динамическая форма заказа, загрузка файлов, список и детали отправленных заявок."
+version = "1.0.0"
+id = "artifacts/kocher-beck-smart-order-web"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18825
+
+[services.development]
+run = "pnpm --filter @workspace/kocher-beck-smart-order-web run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/kocher-beck-smart-order-web", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/kocher-beck-smart-order-web/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18825"
+BASE_PATH = "/"
