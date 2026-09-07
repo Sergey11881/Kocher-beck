@@ -48,6 +48,21 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      <Pressable
+        testID="order-history-button"
+        onPress={() => router.push('/orders')}
+        style={({ pressed }) => [styles.historyCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.78 : 1 }]}
+      >
+        <View style={[styles.historyIcon, { backgroundColor: colors.secondary }]}>
+          <Feather name="clock" size={19} color={colors.primary} />
+        </View>
+        <View style={styles.historyCopy}>
+          <Text style={[styles.historyTitle, { color: colors.foreground }]}>История заказов</Text>
+          <Text style={[styles.historyBody, { color: colors.mutedForeground }]}>Все заявки и текущие этапы производства</Text>
+        </View>
+        <Feather name="arrow-right" size={18} color={colors.primary} />
+      </Pressable>
+
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Последние заявки</Text>
         {orders.length > 0 ? (
@@ -98,6 +113,11 @@ const styles = StyleSheet.create({
   heroCircleSmall: { position: 'absolute', width: 94, height: 94, borderRadius: 47, right: 22, bottom: -28, opacity: 0.95 },
   primaryButton: { minHeight: 48, paddingHorizontal: 16, borderRadius: 14, flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 12 },
   primaryButtonText: { fontSize: 13, fontFamily: 'Inter_700Bold' },
+  historyCard: { marginHorizontal: 20, marginTop: 16, padding: 15, borderRadius: 18, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  historyIcon: { width: 42, height: 42, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  historyCopy: { flex: 1 },
+  historyTitle: { fontSize: 14, fontFamily: 'Inter_700Bold', marginBottom: 4 },
+  historyBody: { fontSize: 11, fontFamily: 'Inter_400Regular' },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 20, marginTop: 30, marginBottom: 14 },
   sectionTitle: { fontSize: 18, fontFamily: 'Inter_700Bold' },
   link: { fontSize: 12, fontFamily: 'Inter_700Bold' },

@@ -27,7 +27,8 @@ export const GetProductsResponseItem = zod.object({
   "label": zod.string(),
   "type": zod.enum(['text', 'file', 'number', 'select', 'textarea']),
   "required": zod.boolean(),
-  "options": zod.array(zod.string()).optional()
+  "options": zod.array(zod.string()).optional(),
+  "readOnly": zod.boolean().optional()
 }))
 })
 export const GetProductsResponse = zod.array(GetProductsResponseItem)
@@ -44,6 +45,7 @@ export const GetOrdersResponseItem = zod.object({
   "client": zod.string(),
   "contact": zod.string(),
   "comment": zod.string(),
+  "status": zod.enum(['Получен', 'Ожидает согласования', 'В производстве', 'Доставка', 'Готов к отгрузке']),
   "created_at": zod.string()
 })
 export const GetOrdersResponse = zod.array(GetOrdersResponseItem)
@@ -69,6 +71,7 @@ export const CreateOrderResponse = zod.object({
   "client": zod.string(),
   "contact": zod.string(),
   "comment": zod.string(),
+  "status": zod.enum(['Получен', 'Ожидает согласования', 'В производстве', 'Доставка', 'Готов к отгрузке']),
   "created_at": zod.string()
 }).and(zod.object({
   "data": zod.record(zod.string(), zod.string()),
@@ -91,6 +94,7 @@ export const GetOrderResponse = zod.object({
   "client": zod.string(),
   "contact": zod.string(),
   "comment": zod.string(),
+  "status": zod.enum(['Получен', 'Ожидает согласования', 'В производстве', 'Доставка', 'Готов к отгрузке']),
   "created_at": zod.string()
 }).and(zod.object({
   "data": zod.record(zod.string(), zod.string()),

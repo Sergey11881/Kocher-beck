@@ -5,6 +5,7 @@
  * API for print tooling orders
  * OpenAPI spec version: 0.2.0
  */
+import type { OrderStatus } from './orderStatus';
 
 export interface OrderSummary {
   id: number;
@@ -14,5 +15,6 @@ export interface OrderSummary {
   client: string;
   contact: string;
   comment: string;
+  status: OrderStatus;
   created_at: string;
 }

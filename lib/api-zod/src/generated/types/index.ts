@@ -13,5 +13,6 @@ export * from './fieldDefinitionType';
 export * from './healthStatus';
 export * from './order';
 export * from './orderData';
+export * from './orderStatus';
 export * from './orderSummary';
 export * from './productDefinition';

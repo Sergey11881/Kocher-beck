@@ -26,6 +26,7 @@ export interface FieldDefinition {
   type: FieldDefinitionType;
   required: boolean;
   options?: string[];
+  readOnly?: boolean;
 }
 
 export interface ProductDefinition {
@@ -33,6 +34,17 @@ export interface ProductDefinition {
   name: string;
   fields: FieldDefinition[];
 }
+
+export type OrderStatus = typeof OrderStatus[keyof typeof OrderStatus];
+
+
+export const OrderStatus = {
+  Получен: 'Получен',
+  Ожидает_согласования: 'Ожидает согласования',
+  В_производстве: 'В производстве',
+  Доставка: 'Доставка',
+  Готов_к_отгрузке: 'Готов к отгрузке',
+} as const;
 
 export interface OrderSummary {
   id: number;
@@ -42,6 +54,7 @@ export interface OrderSummary {
   client: string;
   contact: string;
   comment: string;
+  status: OrderStatus;
   created_at: string;
 }
 

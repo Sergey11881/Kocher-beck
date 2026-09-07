@@ -41,6 +41,7 @@ PRODUCTS = {
             ("machine", "Марка и модель машины", "text", True),
             ("drawing", "Чертёж формного / печатного цилиндра и шестерни с линейными размерами", "file", True),
             ("teeth", "Количество зубьев / Z", "number", True),
+            ("tooth_module", "Модуль зуба", "select", True, ["C.P.", "D.P."]),
             ("repeat", "Раппорт", "text", True),
             ("cylinder_count", "Количество цилиндров", "number", True),
             ("tape", "Толщина 2-х стороннего скотча, мм", "number", True),
@@ -52,6 +53,9 @@ PRODUCTS = {
         "fields": [
             ("machine", "Марка и модель машины", "text", True),
             ("drawing", "Чертёж цилиндра противодавления и шестерни с линейными размерами", "file", True),
+            ("teeth", "Количество зубьев / Z", "number", True),
+            ("tooth_module", "Модуль зуба", "select", True, ["C.P.", "D.P."]),
+            ("repeat", "Раппорт", "text", True),
             ("shaft_count", "Количество валов", "number", True),
         ],
     },
@@ -143,10 +147,14 @@ def init_db():
             comment TEXT NOT NULL DEFAULT '',
             data TEXT NOT NULL DEFAULT '{}',
             files TEXT NOT NULL DEFAULT '[]',
+            status TEXT NOT NULL DEFAULT 'Получен',
             created_at TEXT NOT NULL
         )
         """
     )
+    columns = {row["name"] for row in connection.execute("PRAGMA table_info(orders)").fetchall()}
+    if "status" not in columns:
+        connection.execute("ALTER TABLE orders ADD COLUMN status TEXT NOT NULL DEFAULT 'Получен'")
     connection.commit()
     connection.close()
 
@@ -162,6 +170,8 @@ def product_payload(key, product):
         }
         if len(field) > 4:
             field_payload["options"] = field[4]
+        if key in {"magnetic", "printing", "counterpressure"} and field[0] == "repeat":
+            field_payload["readOnly"] = True
         fields.append(field_payload)
     return {"key": key, "name": product["name"], "fields": fields}
 
@@ -175,6 +185,7 @@ def serialize_order(row, include_details=False):
         "client": row["client"],
         "contact": row["contact"],
         "comment": row["comment"],
+        "status": row["status"],
         "created_at": row["created_at"],
     }
     if include_details:
@@ -188,6 +199,23 @@ def error(message, status=400):
 
 
 init_db()
+
+
+TOOTH_MODULES = {"C.P.": 3.175, "D.P.": 2.49364}
+
+
+def calculated_repeat(product_type, data):
+    if product_type not in {"magnetic", "printing", "counterpressure"}:
+        return
+    module = TOOTH_MODULES.get(str(data.get("tooth_module", "")).strip())
+    try:
+        teeth = float(str(data.get("teeth", "")).replace(",", "."))
+    except (TypeError, ValueError):
+        return
+    if module is None or teeth <= 0:
+        return
+    repeat = teeth * module
+    data["repeat"] = f"{repeat:.5f}".rstrip("0").rstrip(".") + " мм"
 
 
 @app.get("/api/healthz")
@@ -222,6 +250,7 @@ def create_order():
         return error("Параметры заказа должны быть объектом.")
 
     product = PRODUCTS[product_type]
+    calculated_repeat(product_type, data)
     missing = []
     file_fields = data.get("__file_fields", [])
     if not isinstance(file_fields, list):
@@ -255,8 +284,8 @@ def create_order():
     cursor = connection.execute(
         """
         INSERT INTO orders
-        (order_number, product_type, product_name, client, contact, comment, data, files, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (order_number, product_type, product_name, client, contact, comment, data, files, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             order_number,
@@ -267,6 +296,7 @@ def create_order():
             request.form.get("comment", "").strip(),
             json.dumps(data, ensure_ascii=False),
             json.dumps(saved_files, ensure_ascii=False),
+            "Получен",
             now,
         ),
     )

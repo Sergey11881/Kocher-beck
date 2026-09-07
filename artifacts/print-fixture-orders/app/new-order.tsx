@@ -6,12 +6,14 @@ import {
   ProductDefinition,
   getGetProductsQueryKey,
   getGetOrdersQueryKey,
+  getGetOrderQueryKey,
   useCreateOrder,
+  useGetOrder,
   useGetProducts,
 } from '@workspace/api-client-react';
-import { router } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
@@ -22,6 +24,31 @@ type PickedFile = { uri: string; name: string; mimeType?: string };
 type Step = 0 | 1 | 2;
 
 const steps = ['Оснастка', 'Параметры', 'Контакты'];
+const toothModules: Record<string, number> = { 'C.P.': 3.175, 'D.P.': 2.49364 };
+
+function calculateRepeat(productKey: string, values: Record<string, string>) {
+  if (!['magnetic', 'printing', 'counterpressure'].includes(productKey)) return '';
+  const teeth = Number.parseFloat((values.teeth ?? '').replace(',', '.'));
+  const module = toothModules[values.tooth_module ?? ''];
+  if (!Number.isFinite(teeth) || teeth <= 0 || !module) return '';
+  return `${(teeth * module).toFixed(5).replace(/\.?0+$/, '')} мм`;
+}
+
+function orderMailto(order: { order_number: string; product_name: string; client: string; contact: string; status: string; comment: string; data: Record<string, string> }) {
+  const lines = [
+    `Номер заявки: ${order.order_number}`,
+    `Изделие: ${order.product_name}`,
+    `Заказчик: ${order.client || 'Не указан'}`,
+    `Контакт: ${order.contact || 'Не указан'}`,
+    `Этап: ${order.status}`,
+    '',
+    'Параметры:',
+    ...Object.entries(order.data ?? {}).filter(([key]) => key !== '__file_fields').map(([key, value]) => `${key}: ${value}`),
+    '',
+    `Комментарий: ${order.comment || 'Нет'}`,
+  ];
+  return `mailto:spavlov@kocher-beck.ru?subject=${encodeURIComponent(`Заявка ${order.order_number}`)}&body=${encodeURIComponent(lines.join('\n'))}`;
+}
 
 function haptic() {
   if (Platform.OS !== 'web') void Haptics.selectionAsync();
@@ -98,6 +125,7 @@ function FieldInput({
           testID={`field-${field.key}`}
           value={value}
           onChangeText={onChange}
+           editable={!field.readOnly}
           placeholder={field.label}
           placeholderTextColor={colors.mutedForeground}
           keyboardType={field.type === 'number' ? 'numeric' : 'default'}
@@ -105,7 +133,7 @@ function FieldInput({
           textAlignVertical={isMultiline ? 'top' : 'center'}
           style={[
             styles.input,
-            { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.input },
+             { color: field.readOnly ? colors.mutedForeground : colors.foreground, backgroundColor: field.readOnly ? colors.secondary : colors.card, borderColor: colors.input },
             isMultiline && styles.textarea,
           ]}
         />
@@ -155,7 +183,11 @@ export default function NewOrderScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { saveDraft } = useDrafts();
+  const params = useLocalSearchParams<{ repeat?: string }>();
+  const repeatParam = Array.isArray(params.repeat) ? params.repeat[0] : params.repeat;
+  const repeatId = Number(repeatParam);
   const productsQuery = useGetProducts({ query: { queryKey: getGetProductsQueryKey(), staleTime: 300_000 } });
+  const repeatOrderQuery = useGetOrder(repeatId, { query: { queryKey: getGetOrderQueryKey(repeatId), enabled: Number.isFinite(repeatId) } });
   const createOrder = useCreateOrder();
   const [step, setStep] = useState<Step>(0);
   const [selectedKey, setSelectedKey] = useState('');
@@ -170,6 +202,16 @@ export default function NewOrderScreen() {
   const progress = useMemo(() => `${((step + 1) / steps.length) * 100}%` as `${number}%`, [step]);
   const isSaving = createOrder.isPending;
 
+  useEffect(() => {
+    if (!Number.isFinite(repeatId) || !repeatOrderQuery.data || selectedKey) return;
+    const repeated = repeatOrderQuery.data;
+    setSelectedKey(repeated.product_type);
+    setValues(repeated.data ?? {});
+    setClient(repeated.client ?? '');
+    setContact(repeated.contact ?? '');
+    setComment(repeated.comment ?? '');
+  }, [repeatId, repeatOrderQuery.data, selectedKey]);
+
   const selectProduct = (product: ProductDefinition) => {
     setSelectedKey(product.key);
     setValues({});
@@ -177,7 +219,11 @@ export default function NewOrderScreen() {
     haptic();
   };
 
-  const updateValue = (key: string, value: string) => setValues((current) => ({ ...current, [key]: value }));
+  const updateValue = (key: string, value: string) => setValues((current) => {
+    const next = { ...current, [key]: value };
+    if (selectedProduct && (key === 'teeth' || key === 'tooth_module')) next.repeat = calculateRepeat(selectedProduct.key, next);
+    return next;
+  });
 
   const pickFile = async (fieldKey: string) => {
     const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
@@ -243,8 +289,9 @@ export default function NewOrderScreen() {
     };
 
     try {
-      const order = await createOrder.mutateAsync({ data: body });
+       const order = await createOrder.mutateAsync({ data: body });
       await queryClient.invalidateQueries({ queryKey: getGetOrdersQueryKey() });
+       void Linking.openURL(orderMailto(order));
       haptic();
       router.replace(`/order/${order.id}`);
     } catch {

@@ -47,7 +47,7 @@ export default function OrdersScreen() {
             </Pressable>
           </View>
         ) : orders.length > 0 ? (
-          orders.map((order) => <OrderCard key={order.id} order={order} onPress={() => router.push(`/order/${order.id}`)} />)
+          orders.map((order) => <OrderCard key={order.id} order={order} onPress={() => router.push(`/order/${order.id}`)} onRepeat={() => router.push(`/new-order?repeat=${order.id}`)} />)
         ) : (
           <View style={[styles.empty, { borderColor: colors.border, backgroundColor: colors.card }]}>
             <Feather name="inbox" size={28} color={colors.primary} />

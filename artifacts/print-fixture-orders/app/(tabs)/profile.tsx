@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useGetOrders } from '@workspace/api-client-react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDrafts } from '@/context/OrdersContext';
 import { useColors } from '@/hooks/useColors';
@@ -11,6 +11,11 @@ export default function ProfileScreen() {
   const ordersQuery = useGetOrders();
   const { drafts } = useDrafts();
   const orders = ordersQuery.data ?? [];
+  const managers = [
+    { name: 'Павлов Сергей', role: 'Менеджер-технолог', phone: '+7 968 447 12 94' },
+    { name: 'Денисюк Екатерина', role: 'Старший менеджер продаж', phone: '+7 965 368 15 91' },
+    { name: 'Савинецкий Алексей', role: 'Руководитель отдела', phone: '+7 964 628 56 41' },
+  ];
 
   return (
     <ScrollView
@@ -48,6 +53,29 @@ export default function ProfileScreen() {
         <Feather name="shield" size={18} color={colors.secondaryForeground} />
         <Text style={[styles.noteText, { color: colors.secondaryForeground }]}>Черновики хранятся только на этом устройстве. Отправленные заявки доступны типографии на сервере.</Text>
       </View>
+
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Связь с менеджером</Text>
+      <Text style={[styles.contactHint, { color: colors.mutedForeground }]}>Нажмите на специалиста, чтобы позвонить и уточнить параметры заказа.</Text>
+      <View style={styles.managers}>
+        {managers.map((manager) => (
+          <Pressable
+            key={manager.phone}
+            testID={`manager-${manager.phone.replace(/\s/g, '-')}`}
+            onPress={() => void Linking.openURL(`tel:${manager.phone.replace(/\s/g, '')}`)}
+            style={({ pressed }) => [styles.managerCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.72 : 1 }]}
+          >
+            <View style={[styles.managerIcon, { backgroundColor: colors.secondary }]}>
+              <Feather name="phone" size={16} color={colors.primary} />
+            </View>
+            <View style={styles.managerCopy}>
+              <Text style={[styles.managerName, { color: colors.cardForeground }]}>{manager.name}</Text>
+              <Text style={[styles.managerRole, { color: colors.mutedForeground }]}>{manager.role}</Text>
+              <Text style={[styles.managerPhone, { color: colors.primary }]}>{manager.phone}</Text>
+            </View>
+            <Feather name="chevron-right" size={17} color={colors.mutedForeground} />
+          </Pressable>
+        ))}
+      </View>
     </ScrollView>
   );
 }
@@ -68,4 +96,12 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, fontFamily: 'Inter_500Medium' },
   note: { flexDirection: 'row', alignItems: 'flex-start', borderRadius: 16, padding: 15, marginTop: 24, gap: 11 },
   noteText: { flex: 1, fontSize: 12, lineHeight: 18, fontFamily: 'Inter_500Medium' },
+  contactHint: { fontSize: 12, lineHeight: 18, fontFamily: 'Inter_400Regular', marginTop: -7, marginBottom: 14 },
+  managers: { gap: 10 },
+  managerCard: { borderRadius: 17, borderWidth: 1, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  managerIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  managerCopy: { flex: 1 },
+  managerName: { fontSize: 14, fontFamily: 'Inter_700Bold', marginBottom: 3 },
+  managerRole: { fontSize: 11, fontFamily: 'Inter_400Regular', marginBottom: 5 },
+  managerPhone: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
 });

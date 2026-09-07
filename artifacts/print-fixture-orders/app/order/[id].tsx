@@ -34,6 +34,8 @@ export default function OrderDetailsScreen() {
 
   const date = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(order.created_at));
   const dataRows = Object.entries(order.data).filter(([key, value]) => key !== '__file_fields' && value);
+  const stages = ['Получен', 'Ожидает согласования', 'В производстве', 'Доставка', 'Готов к отгрузке'];
+  const currentStage = Math.max(0, stages.indexOf(order.status ?? 'Получен'));
 
   return (
     <ScrollView
@@ -57,6 +59,19 @@ export default function OrderDetailsScreen() {
         <Text style={[styles.title, { color: colors.foreground }]}>{order.order_number}</Text>
         <Text style={[styles.productName, { color: colors.primary }]}>{order.product_name}</Text>
         <Text style={[styles.meta, { color: colors.mutedForeground }]}>Создана {date}</Text>
+
+        <View style={styles.stages} accessibilityLabel="Этапы заказа">
+          {stages.map((stage, index) => (
+            <View key={stage} style={styles.stageItem}>
+              <View style={[styles.stageTrack, { backgroundColor: index <= currentStage ? colors.primary : colors.border }]} />
+              <Text numberOfLines={1} style={[styles.stageLabel, { color: index === currentStage ? colors.foreground : colors.mutedForeground }]}>{stage}</Text>
+            </View>
+          ))}
+        </View>
+        <Pressable testID="repeat-order-detail" onPress={() => router.push(`/new-order?repeat=${order.id}`)} style={({ pressed }) => [styles.repeatButton, { borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}>
+          <Feather name="refresh-cw" size={15} color={colors.primary} />
+          <Text style={[styles.repeatText, { color: colors.primary }]}>Повторить заказ</Text>
+        </Pressable>
 
         <View style={[styles.detailsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <DetailRow label="Компания / заказчик" value={order.client} colors={colors} />
@@ -116,6 +131,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, lineHeight: 34, fontFamily: 'Inter_700Bold', marginTop: 17, marginBottom: 6 },
   productName: { fontSize: 14, fontFamily: 'Inter_600SemiBold', marginBottom: 6 },
   meta: { fontSize: 12, fontFamily: 'Inter_400Regular', marginBottom: 25 },
+  stages: { flexDirection: 'row', gap: 4, marginBottom: 12 },
+  stageItem: { flex: 1, minWidth: 0 },
+  stageTrack: { height: 4, borderRadius: 2 },
+  stageLabel: { fontSize: 8, lineHeight: 11, fontFamily: 'Inter_500Medium', marginTop: 5 },
+  repeatButton: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: 11, paddingHorizontal: 11, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 18 },
+  repeatText: { fontSize: 12, fontFamily: 'Inter_700Bold' },
   detailsCard: { borderRadius: 18, borderWidth: 1, paddingHorizontal: 16 },
   row: { minHeight: 51, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 18, borderBottomWidth: 1 },
   rowLabel: { fontSize: 12, fontFamily: 'Inter_400Regular', flex: 1 },

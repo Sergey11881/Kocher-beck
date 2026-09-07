@@ -1,127 +1,95 @@
-import React from 'react';
-import { Platform, StyleSheet, useColorScheme, View } from 'react-native';
-import { useColors } from '@/hooks/useColors';
-import { Feather } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import { isLiquidGlassAvailable } from 'expo-glass-effect';
-import { Tabs } from 'expo-router';
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
-import { SymbolView } from 'expo-symbols';
-import { CreatorCredit } from '@/components/CreatorCredit';
+import React from "react";
+import { Platform, StyleSheet, useColorScheme, View } from "react-native";
+import { Tabs } from "expo-router";
+import { Feather } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import { useColors } from "@/hooks/useColors";
+import { CreatorCredit } from "@/components/CreatorCredit";
 
-// IMPORTANT: iOS 26 uses NativeTabs for native tabs with liquid glass support.
-// NativeTabs intentionally does NOT use custom design tokens — liquid glass
-// is a system-level appearance provided by iOS and cannot be overridden.
-// Custom brand colors are applied only on the ClassicTabLayout path (older iOS / Android / web).
-function NativeTabLayout() {
-  return (
-    <View style={styles.layout}>
-      <NativeTabs>
-        <NativeTabs.Trigger name="index">
-          <Icon sf={{ default: 'house', selected: 'house.fill' }} />
-          <Label>Главная</Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="orders">
-          <Icon sf={{ default: 'doc.text', selected: 'doc.text.fill' }} />
-          <Label>Заявки</Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="profile">
-          <Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} />
-          <Label>Профиль</Label>
-        </NativeTabs.Trigger>
-      </NativeTabs>
-      <CreatorCredit floating />
-    </View>
-  );
-}
-
-function ClassicTabLayout() {
+export default function TabLayout() {
   const colors = useColors();
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const isIOS = Platform.OS === 'ios';
-  const isWeb = Platform.OS === 'web';
+
+  const isDark = colorScheme === "dark";
+  const isIOS = Platform.OS === "ios";
+  const isWeb = Platform.OS === "web";
 
   return (
     <View style={styles.layout}>
       <Tabs
         screenOptions={{
+          headerShown: true,
+
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.mutedForeground,
-          headerShown: true,
+
           tabBarStyle: {
-            position: 'absolute',
-            backgroundColor: isIOS ? 'transparent' : colors.background,
+            position: "absolute",
+            backgroundColor: isIOS ? "transparent" : colors.background,
             borderTopWidth: isWeb ? 1 : 0,
             borderTopColor: colors.border,
             elevation: 0,
             ...(isWeb ? { height: 84 } : {}),
           },
+
           tabBarBackground: () =>
             isIOS ? (
               <BlurView
                 intensity={100}
-                tint={isDark ? 'dark' : 'light'}
+                tint={isDark ? "dark" : "light"}
                 style={StyleSheet.absoluteFill}
               />
-            ) : isWeb ? (
+            ) : (
               <View
                 style={[
                   StyleSheet.absoluteFill,
                   { backgroundColor: colors.background },
                 ]}
               />
-            ) : null,
+            ),
         }}
       >
         <Tabs.Screen
           name="index"
           options={{
-            title: 'Главная',
-            tabBarIcon: ({ color }) =>
-              isIOS ? (
-                <SymbolView name="house" tintColor={color} size={24} />
-              ) : (
-                <Feather name="home" size={22} color={color} />
-              ),
+            title: "Главная",
+            tabBarLabel: "Главная",
+            tabBarIcon: ({ color, size }) => (
+              <Feather name="home" size={size || 24} color={color} />
+            ),
           }}
         />
+
         <Tabs.Screen
           name="orders"
           options={{
-            title: 'Заявки',
-            tabBarIcon: ({ color }) =>
-              isIOS ? (
-                <SymbolView name="doc.text" tintColor={color} size={24} />
-              ) : (
-                <Feather name="file-text" size={22} color={color} />
-              ),
+            title: "Заявки",
+            tabBarLabel: "Заявки",
+            tabBarIcon: ({ color, size }) => (
+              <Feather name="file-text" size={size || 24} color={color} />
+            ),
           }}
         />
+
         <Tabs.Screen
           name="profile"
           options={{
-            title: 'Профиль',
-            tabBarIcon: ({ color }) =>
-              isIOS ? (
-                <SymbolView name="person.crop.circle" tintColor={color} size={24} />
-              ) : (
-                <Feather name="user" size={22} color={color} />
-              ),
+            title: "Профиль",
+            tabBarLabel: "Профиль",
+            tabBarIcon: ({ color, size }) => (
+              <Feather name="user" size={size || 24} color={color} />
+            ),
           }}
         />
       </Tabs>
+
       <CreatorCredit floating />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  layout: { flex: 1 },
+  layout: {
+    flex: 1,
+  },
 });
-export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
-  return <ClassicTabLayout />;
-}

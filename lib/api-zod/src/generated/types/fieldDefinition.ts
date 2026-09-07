@@ -13,4 +13,5 @@ export interface FieldDefinition {
   type: FieldDefinitionType;
   required: boolean;
   options?: string[];
+  readOnly?: boolean;
 }

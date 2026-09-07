@@ -7,4 +7,4 @@ The workspace currently uses Zod 3 through the package catalog while Orval can g
 
 **Why:** API code generation initially produced `zod.int`, missing `File`/`Blob` types, and a duplicate export when the contract used integer and binary fields.
 
-**How to apply:** Prefer numeric schemas when an integer-only distinction is not essential, include DOM types for generated API schema compilation when binary fields are present, and verify the public Zod barrel after every codegen run.
+**How to apply:** Prefer numeric schemas when an integer-only distinction is not essential, include DOM types for generated API schema compilation when binary fields are present, and verify the public Zod barrel after every codegen run; if codegen re-adds the generated-types barrel, remove that duplicate re-export before the workspace typecheck.

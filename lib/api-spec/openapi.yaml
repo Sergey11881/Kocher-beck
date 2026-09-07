@@ -146,6 +146,8 @@ components:
           type: array
           items:
             type: string
+        readOnly:
+          type: boolean
       required:
         - key
         - label
@@ -183,6 +185,8 @@ components:
           type: string
         comment:
           type: string
+        status:
+          $ref: "#/components/schemas/OrderStatus"
         created_at:
           type: string
       required:
@@ -193,7 +197,16 @@ components:
         - client
         - contact
         - comment
+        - status
         - created_at
+    OrderStatus:
+      type: string
+      enum:
+        - Получен
+        - Ожидает согласования
+        - В производстве
+        - Доставка
+        - Готов к отгрузке
     Order:
       allOf:
         - $ref: "#/components/schemas/OrderSummary"
