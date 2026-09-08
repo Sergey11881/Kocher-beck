@@ -1,6 +1,6 @@
 kind = "mobile"
 previewPath = "/print-fixture-orders/"
-title = "Kocher+Beck Smart Order"
+title = "Kocher+Beck  Mobile"
 description = "Мобильное приложение Kocher+Beck Smart Order для пошагового оформления заявок на типографскую оснастку, сохранения черновиков и просмотра отправленных заказов."
 version = "1.0.0"
 id = "artifacts/print-fixture-orders"
