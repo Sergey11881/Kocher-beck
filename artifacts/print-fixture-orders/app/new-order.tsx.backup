@@ -13,7 +13,7 @@ import {
 } from '@workspace/api-client-react';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Image, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
@@ -142,14 +142,6 @@ function FieldInput({
   );
 }
 
-function getProductImage(name: string) {
-  if (name === 'Магнитный цилиндр') return require('../assets/tooling/MC.jpg');
-  if (name === 'Цилиндр противодавления') return require('../assets/tooling/CPD.jpg');
-  if (name === 'Цельнометаллический вырубной цилиндр') return require('../assets/tooling/virc.webp');
-  if (name === 'Формные / печатные цилиндры') return require('../assets/tooling/f&pc.jpg');
-  return null;
-}
-
 function ProductCard({
   product,
   selected,
@@ -161,8 +153,6 @@ function ProductCard({
   onPress: () => void;
   colors: ReturnType<typeof useColors>;
 }) {
-  const productImage = getProductImage(product.name);
-
   return (
     <Pressable
       testID={`product-${product.key}`}
@@ -176,20 +166,9 @@ function ProductCard({
         },
       ]}
     >
-      {productImage ? (
-        <View
-          style={[
-            styles.productImageWrap,
-            { backgroundColor: selected ? colors.background : colors.secondary },
-          ]}
-        >
-          <Image source={productImage} style={styles.productImage} resizeMode="contain" />
-        </View>
-      ) : (
-        <View style={[styles.productIcon, { backgroundColor: selected ? colors.primary : colors.secondary }]}>
-          <Feather name="box" size={19} color={selected ? colors.primaryForeground : colors.secondaryForeground} />
-        </View>
-      )}
+      <View style={[styles.productIcon, { backgroundColor: selected ? colors.primary : colors.secondary }]}>
+        <Feather name="box" size={19} color={selected ? colors.primaryForeground : colors.secondaryForeground} />
+      </View>
       <Text style={[styles.productName, { color: selected ? colors.background : colors.cardForeground }]}>{product.name}</Text>
       <Text style={[styles.productMeta, { color: selected ? colors.secondary : colors.mutedForeground }]}>
         {product.fields.length} {product.fields.length === 1 ? 'параметр' : 'параметров'}
@@ -467,41 +446,11 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   retryText: { fontSize: 12, fontFamily: 'Inter_700Bold' },
   productGrid: { gap: 12 },
-  productCard: {
-    minHeight: 112,
-    borderRadius: 24,
-    borderWidth: 1.5,
-    padding: 14,
-    position: 'relative',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.16,
-    shadowRadius: 24,
-    elevation: 8,
-    overflow: 'hidden',
-  },
-  productImageWrap: {
-    width: '100%',
-    height: 100,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.28)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  productImage: {
-    width: '100%',
-    height: '100%',
-  },
+  productCard: { minHeight: 112, borderRadius: 18, borderWidth: 1, padding: 16, position: 'relative' },
   productIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  productName: { fontSize: 15, lineHeight: 19, fontFamily: 'Inter_600SemiBold', paddingRight: 30, letterSpacing: -0.15 },
+  productName: { fontSize: 15, lineHeight: 19, fontFamily: 'Inter_600SemiBold', paddingRight: 30 },
   productMeta: { fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 5 },
-  selectedIcon: { position: 'absolute', right: 14, top: 14 },
+  selectedIcon: { position: 'absolute', right: 16, top: 18 },
   fieldWrap: { marginBottom: 18 },
   label: { fontSize: 12, fontFamily: 'Inter_600SemiBold', marginBottom: 8 },
   input: { minHeight: 50, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, fontSize: 14, fontFamily: 'Inter_400Regular' },

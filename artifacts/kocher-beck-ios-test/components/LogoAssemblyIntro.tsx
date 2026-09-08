@@ -80,7 +80,7 @@ export function LogoAssemblyIntro({ onComplete }: { onComplete: () => void }) {
   });
 
   return (
-    <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.screen, { backgroundColor: colors.background }]}>
+    <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.screen, { backgroundColor: colors.background }]}>
       <View style={[styles.logoStage, { width: size, height: size }]}>
         <Animated.Image
           source={require('@/assets/images/company-logo.png')}
