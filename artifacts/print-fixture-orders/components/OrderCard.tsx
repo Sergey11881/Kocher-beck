@@ -12,8 +12,8 @@ export function OrderCard({ order, onPress, onRepeat }: { order: OrderSummary; o
   const currentStage = Math.max(0, stages.indexOf(order.status ?? 'Получен'));
 
   return (
-    <GlassSurface style={styles.card}>
-      <Pressable testID={`order-card-${order.id}`} onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.72 : 1 }]}>
+    <GlassSurface depth="standard" style={styles.card}>
+      <Pressable testID={`order-card-${order.id}`} onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.82 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] }]}>
       <View style={styles.cardTop}>
         <View style={[styles.typeDot, { backgroundColor: colors.primary }]} />
         <Text style={[styles.date, { color: colors.mutedForeground }]}>{date}</Text>

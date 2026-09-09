@@ -39,6 +39,8 @@ export default function TabLayout() {
             <View style={[StyleSheet.absoluteFill, styles.tabGlass, { borderColor: colors.glassBorder }]}>
               <BlurView intensity={42} tint={colorScheme === "dark" ? "dark" : "light"} style={StyleSheet.absoluteFill} />
               <View style={[StyleSheet.absoluteFill, styles.tabOverlay, { backgroundColor: colors.glassHighlight }]} />
+              <View style={[StyleSheet.absoluteFill, styles.tabShade, { backgroundColor: colors.glassShadow }]} />
+              <View style={[StyleSheet.absoluteFill, styles.tabInnerEdge, { borderColor: colors.glassHighlight }]} />
               <View style={[styles.tabHighlight, { backgroundColor: colors.glassBorder }]} />
             </View>
         }}
@@ -95,7 +97,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   tabOverlay: {
-    opacity: 0.34,
+    opacity: 0.28,
+  },
+  tabShade: {
+    top: "58%",
+    opacity: 0.5,
+  },
+  tabInnerEdge: {
+    borderWidth: 1,
+    borderRadius: 27,
+    margin: 1,
+    opacity: 0.2,
   },
   tabHighlight: {
     position: "absolute",
@@ -103,7 +115,7 @@ const styles = StyleSheet.create({
     left: 28,
     right: 28,
     height: 1,
-    opacity: 0.65,
+    opacity: 0.8,
   },
   tabItem: {
     borderRadius: 18,

@@ -46,7 +46,7 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      <GlassSurface strong style={styles.hero}>
+      <GlassSurface strong depth="deep" intensity={44} style={styles.hero}>
         <View style={[styles.heroGlow, { backgroundColor: colors.primary }]} />
         <View style={styles.heroContent}>
           <View style={styles.heroTopline}>
@@ -60,7 +60,7 @@ export default function HomeScreen() {
           <Pressable
             testID="new-order-button"
             onPress={() => router.push('/new-order')}
-            style={({ pressed }) => [styles.primaryButton, { backgroundColor: colors.primary, opacity: pressed ? 0.82 : 1 }]}
+            style={({ pressed }) => [styles.primaryButton, { backgroundColor: colors.primary, opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] }]}
           >
             <Text style={[styles.primaryButtonText, { color: colors.primaryForeground }]}>Новый заказ</Text>
             <Feather name="arrow-up-right" size={18} color={colors.primaryForeground} />
@@ -115,7 +115,7 @@ export default function HomeScreen() {
 function QuickAction({ icon, title, hint, onPress }: { icon: ComponentProps<typeof Feather>['name']; title: string; hint: string; onPress: () => void }) {
   const colors = useColors();
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.quickAction, { backgroundColor: colors.secondary, borderColor: colors.border, opacity: pressed ? 0.68 : 1 }]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.quickAction, { backgroundColor: colors.secondary, borderColor: colors.border, opacity: pressed ? 0.82 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] }]}>
       <View style={[styles.quickIcon, { backgroundColor: colors.accent }]}>
         <Feather name={icon} size={17} color={colors.accentForeground} />
       </View>
