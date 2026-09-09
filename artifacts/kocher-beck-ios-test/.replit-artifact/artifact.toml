@@ -13,11 +13,11 @@ paths = [ "/print-fixture-orders/" ]
 localPort = 25034
 
 [services.development]
-run = "pnpm --filter @workspace/print-fixture-orders run dev"
+run = "pnpm --filter ./artifacts/kocher-beck-ios-test run dev"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/print-fixture-orders", "run", "build" ]
-run = [ "pnpm", "--filter", "@workspace/print-fixture-orders", "run", "serve" ]
+build = [ "pnpm", "--filter", "./artifacts/kocher-beck-ios-test", "run", "build" ]
+run = [ "pnpm", "--filter", "./artifacts/kocher-beck-ios-test", "run", "serve" ]
 
 [services.env]
 PORT = "25034"

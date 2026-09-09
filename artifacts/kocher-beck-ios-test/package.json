@@ -1,5 +1,5 @@
 {
-  "name": "@workspace/print-fixture-orders",
+  "name": "@workspace/kocher-beck-ios-test",
   "version": "0.0.0",
   "private": true,
   "main": "expo-router/entry",
