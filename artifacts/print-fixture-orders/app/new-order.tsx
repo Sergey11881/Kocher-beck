@@ -219,6 +219,7 @@ export default function NewOrderScreen() {
   const [selectedKey, setSelectedKey] = useState('');
   const [values, setValues] = useState<Record<string, string>>({});
   const [files, setFiles] = useState<Record<string, PickedFile>>({});
+  const [repeatedFileCount, setRepeatedFileCount] = useState(0);
   const [client, setClient] = useState('');
   const [contact, setContact] = useState('');
   const [comment, setComment] = useState('');
@@ -231,14 +232,18 @@ export default function NewOrderScreen() {
   useEffect(() => {
     if (!Number.isFinite(repeatId) || !repeatOrderQuery.data || selectedKey) return;
     const repeated = repeatOrderQuery.data;
+    const repeatedFileFields = new Set(
+      Array.isArray(repeated.data?.__file_fields) ? repeated.data.__file_fields : [],
+    );
     setSelectedKey(repeated.product_type);
     setValues(
       Object.fromEntries(
         Object.entries(repeated.data ?? {})
-          .filter(([, value]) => value !== null && !Array.isArray(value))
+          .filter(([key, value]) => key !== '__file_fields' && !repeatedFileFields.has(key) && value !== null && !Array.isArray(value))
           .map(([key, value]) => [key, String(value)]),
       ),
     );
+    setRepeatedFileCount(Math.max(repeated.files?.length ?? 0, repeatedFileFields.size));
     setClient(repeated.client ?? '');
     setContact(repeated.contact ?? '');
     setComment(repeated.comment ?? '');
@@ -248,6 +253,7 @@ export default function NewOrderScreen() {
     setSelectedKey(product.key);
     setValues({});
     setFiles({});
+    setRepeatedFileCount(0);
     haptic();
   };
 
@@ -405,6 +411,14 @@ export default function NewOrderScreen() {
             <>
               <Text style={[styles.heading, { color: colors.foreground }]}>{selectedProduct.name}</Text>
               <Text style={[styles.description, { color: colors.mutedForeground }]}>Заполните обязательные поля и прикрепите материалы для точного расчёта.</Text>
+              {Number.isFinite(repeatId) && repeatedFileCount > 0 ? (
+                <View style={[styles.repeatNotice, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                  <Feather name="paperclip" size={17} color={colors.primary} />
+                  <Text style={[styles.repeatNoticeText, { color: colors.secondaryForeground }]}>
+                    В исходной заявке было {repeatedFileCount} вложений. Для новой заявки выберите файлы заново: прежние файлы не отправляются повторно автоматически.
+                  </Text>
+                </View>
+              ) : null}
               {selectedProduct.fields.map((field) => (
                 <FieldInput
                   key={field.key}
@@ -476,6 +490,8 @@ const styles = StyleSheet.create({
   loadingText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
   errorBox: { borderWidth: 1, borderRadius: 16, padding: 17, gap: 11 },
   errorText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  repeatNotice: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderRadius: 14, padding: 13, marginBottom: 18 },
+  repeatNoticeText: { flex: 1, fontSize: 12, lineHeight: 18, fontFamily: 'Inter_400Regular' },
   retryText: { fontSize: 12, fontFamily: 'Inter_700Bold' },
   productGrid: { gap: 12 },
   productCard: {
