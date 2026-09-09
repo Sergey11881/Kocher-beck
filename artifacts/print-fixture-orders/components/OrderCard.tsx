@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { OrderSummary } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
+import { GlassSurface } from '@/components/GlassSurface';
 
 const stages = ['Получен', 'Ожидает согласования', 'В производстве', 'Доставка', 'Готов к отгрузке'];
 
@@ -11,14 +12,8 @@ export function OrderCard({ order, onPress, onRepeat }: { order: OrderSummary; o
   const currentStage = Math.max(0, stages.indexOf(order.status ?? 'Получен'));
 
   return (
-    <Pressable
-      testID={`order-card-${order.id}`}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.card,
-        { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.8 : 1 },
-      ]}
-    >
+    <GlassSurface style={styles.card}>
+      <Pressable testID={`order-card-${order.id}`} onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.72 : 1 }]}>
       <View style={styles.cardTop}>
         <View style={[styles.typeDot, { backgroundColor: colors.primary }]} />
         <Text style={[styles.date, { color: colors.mutedForeground }]}>{date}</Text>
@@ -49,11 +44,12 @@ export function OrderCard({ order, onPress, onRepeat }: { order: OrderSummary; o
         </Pressable>
       ) : null}
     </Pressable>
+    </GlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: 18, padding: 16, marginBottom: 12 },
+  card: { borderRadius: 20, padding: 16, marginBottom: 12 },
   cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
   typeDot: { width: 8, height: 8, borderRadius: 4 },
   date: { fontSize: 12, fontFamily: 'Inter_500Medium', textTransform: 'capitalize', flex: 1 },

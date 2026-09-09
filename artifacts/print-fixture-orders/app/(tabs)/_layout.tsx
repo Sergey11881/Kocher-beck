@@ -25,25 +25,29 @@ export default function TabLayout() {
 
           tabBarStyle: {
             position: "absolute",
-            backgroundColor: isIOS ? "transparent" : colors.background,
-            borderTopWidth: isWeb ? 1 : 0,
-            borderTopColor: colors.border,
+            backgroundColor: isIOS || isWeb ? "transparent" : colors.glassStrong,
+            borderTopWidth: 0,
             elevation: 0,
-            ...(isWeb ? { height: 84 } : {}),
+            height: 78,
+            paddingBottom: 10,
+            paddingTop: 8,
+            marginHorizontal: 16,
+            marginBottom: 12,
+            borderRadius: 24,
           },
 
           tabBarBackground: () =>
-            isIOS ? (
+            isIOS || isWeb ? (
               <BlurView
-                intensity={100}
-                tint={isDark ? "dark" : "light"}
+                intensity={70}
+                tint="dark"
                 style={StyleSheet.absoluteFill}
               />
             ) : (
               <View
                 style={[
                   StyleSheet.absoluteFill,
-                  { backgroundColor: colors.background },
+                  { backgroundColor: colors.glassStrong, borderRadius: 24, borderWidth: 1, borderColor: colors.glassBorder },
                 ]}
               />
             ),
