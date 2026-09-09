@@ -61,10 +61,12 @@ const colors = {
     metalHighlight: '#ffffff',
     typography: { display: 32, title: 27, section: 19, body: 14, secondary: 12, caption: 10, button: 13 },
   },
-  radius: 8,
+  radius: { xs: 8, sm: 12, md: 16, lg: 20, xl: 26, pill: 999 },
   spacing: { xs: 6, sm: 10, md: 16, lg: 22, xl: 30, xxl: 40 },
   typography: { eyebrow: 10, body: 13, title: 28, display: 36 },
   iconSize: { sm: 16, md: 20, lg: 26 },
+  control: { minHeight: 48, radius: 14, horizontalPadding: 16 },
+  material: { lightIntensity: 34, standardIntensity: 43, deepIntensity: 55 },
 };
 
 export default colors;

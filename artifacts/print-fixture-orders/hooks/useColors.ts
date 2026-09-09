@@ -22,5 +22,7 @@ export function useColors() {
     spacing: colors.spacing,
     typography: colors.typography,
     iconSize: colors.iconSize,
+    control: colors.control,
+    material: colors.material,
   };
 }

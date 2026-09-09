@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { OrderSummary } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { GlassSurface } from '@/components/GlassSurface';
+import { StatusPill } from '@/components/StatusPill';
 
 const stages = ['Получен', 'Ожидает согласования', 'В производстве', 'Доставка', 'Готов к отгрузке'];
 
@@ -34,10 +35,7 @@ export function OrderCard({ order, onPress, onRepeat }: { order: OrderSummary; o
         {order.product_name}
         {order.client ? ` · ${order.client}` : ''}
       </Text>
-      <View style={[styles.status, { backgroundColor: colors.accent, borderColor: colors.border }]}>
-        <View style={[styles.statusDot, { backgroundColor: colors.primary }]} />
-        <Text style={[styles.statusText, { color: colors.accentForeground }]}>{statusLabel(order.status)}</Text>
-      </View>
+      <StatusPill label={statusLabel(order.status)} />
       <View style={styles.stages} accessibilityLabel="Этапы заказа">
         {stages.map((stage, index) => (
           <View key={stage} style={styles.stageItem}>
@@ -64,9 +62,6 @@ const styles = StyleSheet.create({
   date: { fontSize: 12, fontFamily: 'Inter_500Medium', textTransform: 'capitalize', flex: 1 },
   title: { fontSize: 17, lineHeight: 22, fontFamily: 'Inter_600SemiBold', marginBottom: 4 },
   subtitle: { fontSize: 13, lineHeight: 19, fontFamily: 'Inter_400Regular', marginBottom: 14 },
-  status: { alignSelf: 'flex-start', paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   stages: { flexDirection: 'row', gap: 4, marginTop: 14 },
   stageItem: { flex: 1, minWidth: 0 },
   stageTrack: { height: 4, borderRadius: 2 },

@@ -7,7 +7,7 @@ import { useColors } from '@/hooks/useColors';
 export function GlassSurface({
   children,
   style,
-  intensity = 38,
+  intensity,
   strong = false,
   depth = strong ? 'deep' : 'standard',
 }: {
@@ -19,6 +19,7 @@ export function GlassSurface({
 }) {
   const colors = useColors();
   const isDark = useColorScheme() === 'dark';
+  const resolvedIntensity = intensity ?? colors.material[depth === 'deep' ? 'deepIntensity' : depth === 'light' ? 'lightIntensity' : 'standardIntensity'];
   const depthStyles = {
     light: { shadowOpacity: 0.14, shadowRadius: 18 },
     standard: { shadowOpacity: 0.2, shadowRadius: 24 },
@@ -38,7 +39,7 @@ export function GlassSurface({
 
   return (
     <View style={surfaceStyle}>
-      <BlurView intensity={intensity + (depth === 'deep' ? 12 : depth === 'light' ? -4 : 5)} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+      <BlurView intensity={resolvedIntensity} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
       <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: strong ? colors.glassStrong : colors.glass }]} />
       <LinearGradient
         pointerEvents="none"

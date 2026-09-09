@@ -10,6 +10,7 @@ import { OrderCard } from '@/components/OrderCard';
 import { useAuth } from '@/context/AuthContext';
 import { useDrafts } from '@/context/OrdersContext';
 import { useColors } from '@/hooks/useColors';
+import { GlassButton } from '@/components/GlassButton';
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -59,14 +60,7 @@ export default function HomeScreen() {
           <Text style={[styles.heroBody, { color: colors.mutedForeground }]}>
             Передайте параметры оснастки команде Kocher+Beck в одной понятной заявке.
           </Text>
-          <Pressable
-            testID="new-order-button"
-            onPress={() => router.push('/new-order')}
-            style={({ pressed }) => [styles.primaryButton, { backgroundColor: colors.primary, opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] }]}
-          >
-            <Text style={[styles.primaryButtonText, { color: colors.primaryForeground }]}>Новый заказ</Text>
-            <Feather name="arrow-up-right" size={18} color={colors.primaryForeground} />
-          </Pressable>
+          <GlassButton label="Новый заказ" icon="arrow-up-right" variant="primary" onPress={() => router.push('/new-order')} style={styles.primaryButton} />
         </View>
         <View style={[styles.heroOrb, { borderColor: colors.glassHighlight }]} />
         <View style={[styles.heroOrbSmall, { backgroundColor: colors.primary }]} />
