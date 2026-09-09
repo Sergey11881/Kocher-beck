@@ -5,6 +5,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import type { ComponentProps } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassSurface } from '@/components/GlassSurface';
+import { BackgroundAtmosphere } from '@/components/BackgroundAtmosphere';
 import { OrderCard } from '@/components/OrderCard';
 import { useAuth } from '@/context/AuthContext';
 import { useColors } from '@/hooks/useColors';
@@ -18,12 +19,13 @@ export default function HomeScreen() {
   const recentOrders = orders.slice(0, 2);
 
   return (
-    <ScrollView
-      style={[styles.screen, { backgroundColor: colors.background }]}
-      contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 112 }}
-      refreshControl={<RefreshControl refreshing={ordersQuery.isFetching} onRefresh={() => void ordersQuery.refetch()} tintColor={colors.primary} />}
-      showsVerticalScrollIndicator={false}
-    >
+    <BackgroundAtmosphere>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 112 }}
+        refreshControl={<RefreshControl refreshing={ordersQuery.isFetching} onRefresh={() => void ordersQuery.refetch()} tintColor={colors.primary} />}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.header}>
         <View>
           <View style={styles.brandRow}>
@@ -105,7 +107,8 @@ export default function HomeScreen() {
           <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>Создайте заказ, чтобы передать типографии все параметры в одном месте.</Text>
         </GlassSurface>
       )}
-    </ScrollView>
+      </ScrollView>
+    </BackgroundAtmosphere>
   );
 }
 

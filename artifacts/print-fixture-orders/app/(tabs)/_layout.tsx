@@ -10,9 +10,7 @@ export default function TabLayout() {
   const colors = useColors();
   const colorScheme = useColorScheme();
 
-  const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
-  const isWeb = Platform.OS === "web";
 
   return (
     <View style={styles.layout}>
@@ -22,10 +20,11 @@ export default function TabLayout() {
 
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.mutedForeground,
+          tabBarActiveBackgroundColor: colors.accent,
 
           tabBarStyle: {
             position: "absolute",
-            backgroundColor: isIOS || isWeb ? "transparent" : colors.glassStrong,
+            backgroundColor: "transparent",
             borderTopWidth: 0,
             elevation: 0,
             height: 78,
@@ -33,24 +32,15 @@ export default function TabLayout() {
             paddingTop: 8,
             marginHorizontal: 16,
             marginBottom: 12,
-            borderRadius: 24,
+            borderRadius: 28,
           },
 
           tabBarBackground: () =>
-            isIOS || isWeb ? (
-              <BlurView
-                intensity={70}
-                tint="dark"
-                style={StyleSheet.absoluteFill}
-              />
-            ) : (
-              <View
-                style={[
-                  StyleSheet.absoluteFill,
-                  { backgroundColor: colors.glassStrong, borderRadius: 24, borderWidth: 1, borderColor: colors.glassBorder },
-                ]}
-              />
-            ),
+            <View style={[StyleSheet.absoluteFill, styles.tabGlass, { borderColor: colors.glassBorder }]}>
+              <BlurView intensity={42} tint={colorScheme === "dark" ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+              <View style={[StyleSheet.absoluteFill, styles.tabOverlay, { backgroundColor: colors.glassHighlight }]} />
+              <View style={[styles.tabHighlight, { backgroundColor: colors.glassBorder }]} />
+            </View>
         }}
       >
         <Tabs.Screen
@@ -61,6 +51,7 @@ export default function TabLayout() {
             tabBarIcon: ({ color, size }) => (
               <Feather name="home" size={size || 24} color={color} />
             ),
+            tabBarItemStyle: styles.tabItem,
           }}
         />
 
@@ -72,6 +63,7 @@ export default function TabLayout() {
             tabBarIcon: ({ color, size }) => (
               <Feather name="file-text" size={size || 24} color={color} />
             ),
+            tabBarItemStyle: styles.tabItem,
           }}
         />
 
@@ -83,6 +75,7 @@ export default function TabLayout() {
             tabBarIcon: ({ color, size }) => (
               <Feather name="user" size={size || 24} color={color} />
             ),
+            tabBarItemStyle: styles.tabItem,
           }}
         />
       </Tabs>
@@ -95,5 +88,26 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   layout: {
     flex: 1,
+  },
+  tabGlass: {
+    overflow: "hidden",
+    borderRadius: 28,
+    borderWidth: 1,
+  },
+  tabOverlay: {
+    opacity: 0.34,
+  },
+  tabHighlight: {
+    position: "absolute",
+    top: 0,
+    left: 28,
+    right: 28,
+    height: 1,
+    opacity: 0.65,
+  },
+  tabItem: {
+    borderRadius: 18,
+    marginHorizontal: 4,
+    marginVertical: 5,
   },
 });

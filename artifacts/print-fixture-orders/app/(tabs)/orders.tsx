@@ -5,6 +5,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OrderCard } from '@/components/OrderCard';
 import { GlassSurface } from '@/components/GlassSurface';
+import { BackgroundAtmosphere } from '@/components/BackgroundAtmosphere';
 import { useColors } from '@/hooks/useColors';
 
 export default function OrdersScreen() {
@@ -14,12 +15,13 @@ export default function OrdersScreen() {
   const orders = ordersQuery.data ?? [];
 
   return (
-    <ScrollView
-      style={[styles.screen, { backgroundColor: colors.background }]}
-      contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }}
-      refreshControl={<RefreshControl refreshing={ordersQuery.isFetching} onRefresh={() => void ordersQuery.refetch()} tintColor={colors.primary} />}
-      showsVerticalScrollIndicator={false}
-    >
+    <BackgroundAtmosphere>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }}
+        refreshControl={<RefreshControl refreshing={ordersQuery.isFetching} onRefresh={() => void ordersQuery.refetch()} tintColor={colors.primary} />}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.header}>
         <View>
           <Text style={[styles.eyebrow, { color: colors.primary }]}>ИСТОРИЯ</Text>
@@ -60,7 +62,8 @@ export default function OrdersScreen() {
           </GlassSurface>
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </BackgroundAtmosphere>
   );
 }
 
