@@ -231,6 +231,21 @@ export class ResponseParseError extends Error {
     this.rawBody = rawBody;
     this.cause = cause;
   }
+
+}
+
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) {
+    if (error.status === 413) return 'Файл или запрос слишком большой. Уменьшите вложения и попробуйте ещё раз.';
+    if (error.status === 400) return error.message.replace(/^HTTP 400 [^:]*:\s*/, '') || fallback;
+    if (error.status === 404) return 'Запрашиваемые данные не найдены.';
+    if (error.status >= 500) return 'Сервер временно недоступен. Попробуйте ещё раз позже.';
+    return error.message;
+  }
+  if (error instanceof ResponseParseError) return 'Сервер вернул некорректный ответ. Попробуйте ещё раз.';
+  if (error instanceof TypeError) return 'Не удалось установить соединение с сервером. Проверьте сеть и адрес API.';
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return fallback;
 }
 
 async function parseJsonBody(

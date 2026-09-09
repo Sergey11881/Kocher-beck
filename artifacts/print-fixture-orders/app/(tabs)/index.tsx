@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { getGetOrdersQueryKey, useGetOrders } from '@workspace/api-client-react';
+import { getApiErrorMessage, getGetOrdersQueryKey, useGetOrders } from '@workspace/api-client-react';
 import { router } from 'expo-router';
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -76,7 +76,7 @@ export default function HomeScreen() {
         <View style={[styles.empty, { borderColor: colors.border, backgroundColor: colors.card }]}>
           <Feather name="wifi-off" size={21} color={colors.primary} />
           <Text style={[styles.emptyTitle, { color: colors.cardForeground }]}>Не удалось загрузить заявки</Text>
-          <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>Проверьте соединение с сервером типографии.</Text>
+          <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>{getApiErrorMessage(ordersQuery.error, 'Проверьте соединение с сервером типографии.')}</Text>
           <Pressable onPress={() => void ordersQuery.refetch()} style={[styles.retry, { backgroundColor: colors.secondary }]}>
             <Text style={[styles.retryText, { color: colors.secondaryForeground }]}>Повторить</Text>
           </Pressable>

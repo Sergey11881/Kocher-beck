@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import {
   FieldDefinition,
+  getApiErrorMessage,
   Order,
   ProductDefinition,
   getGetProductsQueryKey,
@@ -325,8 +326,8 @@ export default function NewOrderScreen() {
        void Linking.openURL(orderMailto(order));
       haptic();
       router.replace(`/order/${order.id}`);
-    } catch {
-      Alert.alert('Не удалось отправить заявку', 'Проверьте соединение с сервером и попробуйте ещё раз.');
+    } catch (error) {
+      Alert.alert('Не удалось отправить заявку', getApiErrorMessage(error, 'Проверьте соединение с сервером и попробуйте ещё раз.'));
     }
   };
 

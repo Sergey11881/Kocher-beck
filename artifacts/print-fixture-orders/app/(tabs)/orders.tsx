@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useGetOrders } from '@workspace/api-client-react';
+import { getApiErrorMessage, useGetOrders } from '@workspace/api-client-react';
 import { router } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,7 +41,7 @@ export default function OrdersScreen() {
         {ordersQuery.isError ? (
           <View style={[styles.empty, { borderColor: colors.border, backgroundColor: colors.card }]}>
             <Feather name="wifi-off" size={28} color={colors.primary} />
-            <Text style={[styles.emptyTitle, { color: colors.cardForeground }]}>Не удалось получить заявки</Text>
+            <Text style={[styles.emptyTitle, { color: colors.cardForeground }]}>{getApiErrorMessage(ordersQuery.error, 'Не удалось получить заявки')}</Text>
             <Pressable onPress={() => void ordersQuery.refetch()} style={[styles.emptyButton, { backgroundColor: colors.secondary }]}>
               <Text style={[styles.emptyButtonText, { color: colors.secondaryForeground }]}>Повторить</Text>
             </Pressable>

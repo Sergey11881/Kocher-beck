@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { getGetOrderQueryKey, useGetOrder } from '@workspace/api-client-react';
+import { getApiErrorMessage, getGetOrderQueryKey, useGetOrder } from '@workspace/api-client-react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,6 +27,7 @@ export default function OrderDetailsScreen() {
       <View style={[styles.loading, { backgroundColor: colors.background }]}>
         <Feather name="file-minus" size={30} color={colors.mutedForeground} />
         <Text style={[styles.notFound, { color: colors.foreground }]}>Заявка не найдена</Text>
+        {orderQuery.isError ? <Text style={[styles.errorText, { color: colors.mutedForeground }]}>{getApiErrorMessage(orderQuery.error, 'Не удалось загрузить заявку.')}</Text> : null}
         <Pressable onPress={() => router.replace('/')}><Text style={[styles.link, { color: colors.primary }]}>На главную</Text></Pressable>
       </View>
     );
@@ -119,6 +120,7 @@ function DetailRow({ label, value, colors }: { label: string; value: string; col
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 },
   notFound: { fontSize: 17, fontFamily: 'Inter_600SemiBold', marginVertical: 8 },
+  errorText: { fontSize: 13, lineHeight: 19, textAlign: 'center', maxWidth: 300, marginBottom: 8 },
   link: { fontSize: 13, fontFamily: 'Inter_700Bold' },
   screen: { flex: 1 },
   topBar: { height: 52, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
