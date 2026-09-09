@@ -60,7 +60,7 @@ export const CreateOrderBody = zod.object({
   "contact": zod.string().optional(),
   "comment": zod.string().optional(),
   "data": zod.string().describe('JSON object with product-specific values'),
-  "files": zod.array(zod.instanceof(File)).optional()
+  "files": zod.array(zod.instanceof(File)).optional().describe('Files are uploaded as repeated multipart fields named files.')
 })
 
 export const CreateOrderResponse = zod.object({
@@ -74,7 +74,7 @@ export const CreateOrderResponse = zod.object({
   "status": zod.enum(['Получен', 'Ожидает согласования', 'В производстве', 'Доставка', 'Готов к отгрузке']),
   "created_at": zod.string()
 }).and(zod.object({
-  "data": zod.record(zod.string(), zod.string()),
+  "data": zod.record(zod.string(), zod.union([zod.string(),zod.number(),zod.boolean(),zod.null(),zod.array(zod.string())]).describe('Product-specific values plus the __file_fields string array.')),
   "files": zod.array(zod.string())
 }))
 
@@ -83,7 +83,7 @@ export const CreateOrderResponse = zod.object({
  * @summary Get an order
  */
 export const GetOrderParams = zod.object({
-  "order_id": zod.coerce.number()
+  "order_id": zod.coerce.number().int()
 })
 
 export const GetOrderResponse = zod.object({
@@ -97,8 +97,18 @@ export const GetOrderResponse = zod.object({
   "status": zod.enum(['Получен', 'Ожидает согласования', 'В производстве', 'Доставка', 'Готов к отгрузке']),
   "created_at": zod.string()
 }).and(zod.object({
-  "data": zod.record(zod.string(), zod.string()),
+  "data": zod.record(zod.string(), zod.union([zod.string(),zod.number(),zod.boolean(),zod.null(),zod.array(zod.string())]).describe('Product-specific values plus the __file_fields string array.')),
   "files": zod.array(zod.string())
 }))
+
+
+/**
+ * @summary Download an uploaded order file
+ */
+export const GetUploadParams = zod.object({
+  "filename": zod.coerce.string()
+})
+
+export const GetUploadResponse = zod.unknown()
 
 

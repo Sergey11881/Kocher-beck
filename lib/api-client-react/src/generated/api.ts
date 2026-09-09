@@ -449,3 +449,80 @@ export function useGetOrder<TData = Awaited<ReturnType<typeof getOrder>>, TError
 
 
 
+export const getGetUploadUrl = (filename: string,) => {
+
+
+
+
+  return `/api/uploads/${filename}`
+}
+
+/**
+ * @summary Download an uploaded order file
+ */
+export const getUpload = async (filename: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetUploadUrl(filename),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUploadQueryKey = (filename: string,) => {
+    return [
+    `/api/uploads/${filename}`
+    ] as const;
+    }
+
+
+export const getGetUploadQueryOptions = <TData = Awaited<ReturnType<typeof getUpload>>, TError = ErrorType<ErrorResponse>>(filename: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUpload>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUploadQueryKey(filename);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUpload>>> = ({ signal }) => getUpload(filename, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: filename !== null && filename !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUpload>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUploadQueryResult = NonNullable<Awaited<ReturnType<typeof getUpload>>>
+export type GetUploadQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Download an uploaded order file
+ */
+
+export function useGetUpload<TData = Awaited<ReturnType<typeof getUpload>>, TError = ErrorType<ErrorResponse>>(
+ filename: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUpload>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUploadQueryOptions(filename,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+

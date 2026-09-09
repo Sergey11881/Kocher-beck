@@ -6,4 +6,4 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export type OrderData = {[key: string]: string};
+export type OrderData = {[key: string]: string | number | boolean | null | string[]};

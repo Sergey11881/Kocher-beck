@@ -77,7 +77,7 @@ export default function OrderDetailsScreen() {
           <DetailRow label="Компания / заказчик" value={order.client} colors={colors} />
           <DetailRow label="Контактное лицо" value={order.contact} colors={colors} />
           {dataRows.map(([label, value]) => (
-            <DetailRow key={label} label={label} value={value} colors={colors} />
+            <DetailRow key={label} label={label} value={String(value)} colors={colors} />
           ))}
         </View>
 

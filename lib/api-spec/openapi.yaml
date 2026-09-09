@@ -78,6 +78,7 @@ paths:
                   description: JSON object with product-specific values
                 files:
                   type: array
+                  description: Files are uploaded as repeated multipart fields named files.
                   items:
                     type: string
                     format: binary
@@ -97,6 +98,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Uploaded files exceed the 50 MiB request limit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /orders/{order_id}:
     get:
       operationId: getOrder
@@ -107,7 +114,7 @@ paths:
           in: path
           required: true
           schema:
-            type: number
+            type: integer
       responses:
         "200":
           description: Order
@@ -117,6 +124,31 @@ paths:
                 $ref: "#/components/schemas/Order"
         "404":
           description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /uploads/{filename}:
+    get:
+      operationId: getUpload
+      tags: [orders]
+      summary: Download an uploaded order file
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Uploaded file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: File not found
           content:
             application/json:
               schema:
@@ -215,7 +247,15 @@ components:
             data:
               type: object
               additionalProperties:
-                type: string
+                description: Product-specific values plus the __file_fields string array.
+                anyOf:
+                  - type: string
+                  - type: number
+                  - type: boolean
+                  - type: "null"
+                  - type: array
+                    items:
+                      type: string
             files:
               type: array
               items:

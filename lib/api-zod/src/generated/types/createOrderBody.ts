@@ -13,5 +13,6 @@ export type CreateOrderBody = {
   comment?: string;
   /** JSON object with product-specific values */
   data: string;
+  /** Files are uploaded as repeated multipart fields named files. */
   files?: Blob[];
 };

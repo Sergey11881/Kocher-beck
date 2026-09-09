@@ -57,6 +57,14 @@ type FilesByField = Record<string, File[]>;
 const orderStages = ['Получен', 'Ожидает согласования', 'В производстве', 'Доставка', 'Готов к отгрузке'] as const;
 const toothModules: Record<string, number> = { 'C.P.': 3.175, 'D.P.': 2.49364 };
 
+function toFieldValues(data: Order['data']): FieldValues {
+  return Object.fromEntries(
+    Object.entries(data ?? {})
+      .filter(([, value]) => value !== null && !Array.isArray(value))
+      .map(([key, value]) => [key, String(value)]),
+  );
+}
+
 function calculateRepeat(productKey: string, values: FieldValues) {
   if (!['magnetic', 'printing', 'counterpressure'].includes(productKey)) return '';
   const teeth = Number.parseFloat((values.teeth ?? '').replace(',', '.'));
@@ -396,8 +404,9 @@ function NewOrderPage() {
     if (!Number.isFinite(repeatId) || !repeatedOrder.data || !products.data || selectedKey) return;
     const repeated = repeatedOrder.data;
     setSelectedKey(repeated.product_type);
-    setValues(repeated.data ?? {});
-    form.reset(repeated.data ?? {});
+    const repeatedValues = toFieldValues(repeated.data);
+    setValues(repeatedValues);
+    form.reset(repeatedValues);
     setClientName(repeated.client ?? '');
     setContact(repeated.contact ?? '');
     setComment(repeated.comment ?? '');
@@ -478,8 +487,7 @@ function OrderDetailPage() {
 }
 
 function OrderDetail({ order }: { order: Order }) {
-  let parsedData: Record<string, string> = order.data ?? {};
-  try { if (typeof order.data === 'string') parsedData = JSON.parse(order.data) as Record<string, string>; } catch { parsedData = {}; }
+  const parsedData = toFieldValues(order.data);
   return (
     <div className="space-y-7">
       <section className="flex flex-col justify-between gap-5 border-b border-[hsl(var(--border))] pb-7 sm:flex-row sm:items-end">

@@ -1,8 +1,10 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import {
   FieldDefinition,
+  Order,
   ProductDefinition,
   getGetProductsQueryKey,
   getGetOrdersQueryKey,
@@ -34,7 +36,7 @@ function calculateRepeat(productKey: string, values: Record<string, string>) {
   return `${(teeth * module).toFixed(5).replace(/\.?0+$/, '')} мм`;
 }
 
-function orderMailto(order: { order_number: string; product_name: string; client: string; contact: string; status: string; comment: string; data: Record<string, string> }) {
+function orderMailto(order: Pick<Order, 'order_number' | 'product_name' | 'client' | 'contact' | 'status' | 'comment' | 'data'>) {
   const lines = [
     `Номер заявки: ${order.order_number}`,
     `Изделие: ${order.product_name}`,
@@ -43,7 +45,9 @@ function orderMailto(order: { order_number: string; product_name: string; client
     `Этап: ${order.status}`,
     '',
     'Параметры:',
-    ...Object.entries(order.data ?? {}).filter(([key]) => key !== '__file_fields').map(([key, value]) => `${key}: ${value}`),
+    ...Object.entries(order.data ?? {})
+      .filter(([key, value]) => key !== '__file_fields' && value !== null)
+      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`),
     '',
     `Комментарий: ${order.comment || 'Нет'}`,
   ];
@@ -227,7 +231,13 @@ export default function NewOrderScreen() {
     if (!Number.isFinite(repeatId) || !repeatOrderQuery.data || selectedKey) return;
     const repeated = repeatOrderQuery.data;
     setSelectedKey(repeated.product_type);
-    setValues(repeated.data ?? {});
+    setValues(
+      Object.fromEntries(
+        Object.entries(repeated.data ?? {})
+          .filter(([, value]) => value !== null && !Array.isArray(value))
+          .map(([key, value]) => [key, String(value)]),
+      ),
+    );
     setClient(repeated.client ?? '');
     setContact(repeated.contact ?? '');
     setComment(repeated.comment ?? '');
@@ -473,10 +483,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     padding: 14,
     position: 'relative',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.16,
-    shadowRadius: 24,
-    elevation: 8,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.58)',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 28,
+    elevation: 10,
     overflow: 'hidden',
   },
   productImageWrap: {

@@ -58,7 +58,7 @@ export interface OrderSummary {
   created_at: string;
 }
 
-export type OrderData = {[key: string]: string};
+export type OrderData = {[key: string]: string | number | boolean | null | string[]};
 
 export type Order = OrderSummary & {
   data: OrderData;
@@ -76,6 +76,7 @@ export type CreateOrderBody = {
   comment?: string;
   /** JSON object with product-specific values */
   data: string;
+  /** Files are uploaded as repeated multipart fields named files. */
   files?: Blob[];
 };
 
