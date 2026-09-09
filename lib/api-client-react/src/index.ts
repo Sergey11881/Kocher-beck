@@ -1,4 +1,4 @@
 export * from "./generated/api";
 export * from "./generated/api.schemas";
-export { getApiErrorMessage, setBaseUrl, setAuthTokenGetter } from "./custom-fetch";
+export { getApiErrorMessage, setAuthFailureHandler, setBaseUrl, setAuthTokenGetter } from "./custom-fetch";
 export type { AuthTokenGetter } from "./custom-fetch";

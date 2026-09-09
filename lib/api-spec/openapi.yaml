@@ -13,6 +13,8 @@ tags:
     description: Print tooling catalog
   - name: orders
     description: Customer tooling orders
+  - name: auth
+    description: Operator authentication
 paths:
   /healthz:
     get:
@@ -40,12 +42,50 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ProductDefinition"
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Sign in as an operator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Operator access token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Too many login attempts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /orders:
     get:
       operationId: getOrders
       tags: [orders]
       summary: List customer orders
+      security:
+        - bearerAuth: []
       responses:
+        "401":
+          description: Missing or invalid operator token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "200":
           description: Orders
           content:
@@ -58,6 +98,8 @@ paths:
       operationId: createOrder
       tags: [orders]
       summary: Create a tooling order
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -78,7 +120,8 @@ paths:
                   description: JSON object with product-specific values
                 files:
                   type: array
-                  description: Files are uploaded as repeated multipart fields named files.
+                  maxItems: 10
+                  description: Files are uploaded as repeated multipart fields named files. Each file is limited to 45 MiB and the complete request to 50 MiB.
                   items:
                     type: string
                     format: binary
@@ -86,6 +129,12 @@ paths:
                 - product_type
                 - data
       responses:
+        "401":
+          description: Missing or invalid operator token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "201":
           description: Created order
           content:
@@ -104,11 +153,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Too many order attempts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /orders/{order_id}:
     get:
       operationId: getOrder
       tags: [orders]
       summary: Get an order
+      security:
+        - bearerAuth: []
       parameters:
         - name: order_id
           in: path
@@ -116,6 +173,12 @@ paths:
           schema:
             type: integer
       responses:
+        "401":
+          description: Missing or invalid operator token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "200":
           description: Order
           content:
@@ -133,6 +196,8 @@ paths:
       operationId: getUpload
       tags: [orders]
       summary: Download an uploaded order file
+      security:
+        - bearerAuth: []
       parameters:
         - name: filename
           in: path
@@ -140,6 +205,12 @@ paths:
           schema:
             type: string
       responses:
+        "401":
+          description: Missing or invalid operator token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "200":
           description: Uploaded file
           content:
@@ -154,7 +225,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: OperatorAccessToken
   schemas:
+    LoginRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          format: password
+      required:
+        - password
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_in:
+            type: number
+      required:
+        - access_token
+        - token_type
+        - expires_in
     HealthStatus:
       type: object
       properties:

@@ -23,6 +23,8 @@ import type {
   CreateOrderBody,
   ErrorResponse,
   HealthStatus,
+  LoginRequest,
+  LoginResponse,
   Order,
   OrderSummary,
   ProductDefinition
@@ -209,6 +211,77 @@ export function useGetProducts<TData = Awaited<ReturnType<typeof getProducts>>, 
 
 
 
+export const getLoginUrl = () => {
+
+
+
+
+  return `/api/auth/login`
+}
+
+/**
+ * @summary Sign in as an operator
+ */
+export const login = async (loginRequest: LoginRequest, options?: Parameters<typeof customFetch>[1]): Promise<LoginResponse> => {
+
+  return customFetch<LoginResponse>(getLoginUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(loginRequest)
+  }
+);}
+
+
+
+
+
+export const getLoginMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<LoginRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<LoginRequest>}, TContext> => {
+
+const mutationKey = ['login'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof login>>, {data: BodyType<LoginRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  login(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LoginMutationResult = NonNullable<Awaited<ReturnType<typeof login>>>
+    export type LoginMutationBody = BodyType<LoginRequest>
+    export type LoginMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Sign in as an operator
+ */
+export const useLogin = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<LoginRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof login>>,
+        TError,
+        {data: BodyType<LoginRequest>},
+        TContext
+      > => {
+      return useMutation(getLoginMutationOptions(options));
+    }
+
 export const getGetOrdersUrl = () => {
 
 
@@ -242,7 +315,7 @@ export const getGetOrdersQueryKey = () => {
     }
 
 
-export const getGetOrdersQueryOptions = <TData = Awaited<ReturnType<typeof getOrders>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetOrdersQueryOptions = <TData = Awaited<ReturnType<typeof getOrders>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -261,14 +334,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetOrdersQueryResult = NonNullable<Awaited<ReturnType<typeof getOrders>>>
-export type GetOrdersQueryError = ErrorType<unknown>
+export type GetOrdersQueryError = ErrorType<ErrorResponse>
 
 
 /**
  * @summary List customer orders
  */
 
-export function useGetOrders<TData = Awaited<ReturnType<typeof getOrders>>, TError = ErrorType<unknown>>(
+export function useGetOrders<TData = Awaited<ReturnType<typeof getOrders>>, TError = ErrorType<ErrorResponse>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {

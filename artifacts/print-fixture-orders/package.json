@@ -60,6 +60,7 @@
   "dependencies": {
     "@react-native-masked-view/masked-view": "0.3.2",
     "expo-dev-client": "~57.0.18",
-    "expo-document-picker": "~57.0.1"
+    "expo-document-picker": "~57.0.1",
+    "expo-secure-store": "~57.0.3"
   }
 }

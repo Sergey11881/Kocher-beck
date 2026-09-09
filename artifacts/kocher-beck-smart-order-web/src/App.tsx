@@ -9,6 +9,10 @@ import {
   getGetOrderQueryKey,
   getGetOrdersQueryKey,
   getHealthCheckQueryKey,
+  getApiErrorMessage,
+  login,
+  setAuthFailureHandler,
+  setAuthTokenGetter,
   useCreateOrder,
   useGetOrder,
   useGetOrders,
@@ -51,6 +55,8 @@ import companyLogoIcon from './assets/company-logo-icon.png';
 import './index.css';
 
 const queryClient = new QueryClient();
+let webToken: string | null = sessionStorage.getItem('operator-access-token');
+setAuthTokenGetter(() => webToken);
 const draftStorageKey = 'kocher-beck-smart-order-draft';
 type FieldValues = Record<string, string>;
 type FilesByField = Record<string, File[]>;
@@ -516,6 +522,11 @@ function ProfilePage() {
     if (raw) { try { setDraft(JSON.parse(raw)); } catch { setDraft(null); } }
   }, []);
   const productName = products.data?.find((product) => product.key === draft?.productKey)?.name ?? draft?.productKey;
+  const logout = () => {
+    webToken = null;
+    sessionStorage.removeItem('operator-access-token');
+    window.location.reload();
+  };
   const managers = [
     { name: 'Павлов Сергей', role: 'Менеджер-технолог', phone: '+7 968 447 12 94' },
     { name: 'Денисюк Екатерина', role: 'Старший менеджер продаж', phone: '+7 965 368 15 91' },
@@ -537,6 +548,7 @@ function ProfilePage() {
           {managers.map((manager) => <a key={manager.phone} href={`tel:${manager.phone.replace(/\s/g, '')}`} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.45)] p-4 transition-colors hover:border-[hsl(var(--primary)/.5)]" data-testid={`link-manager-${manager.phone.replace(/\s/g, '-')}`}><p className="text-sm font-extrabold">{manager.name}</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{manager.role}</p><p className="mt-4 flex items-center gap-2 font-mono-ui text-xs font-semibold text-[hsl(var(--primary))]"><Phone className="h-3.5 w-3.5" />{manager.phone}</p></a>)}
         </div>
       </section>
+      <button type="button" onClick={logout} className="quiet-button">Выйти из аккаунта оператора</button>
     </div>
   );
 }
@@ -554,8 +566,57 @@ function Router() {
   return <AppShell><RoutedErrorBoundary><Switch><Route path="/" component={OverviewPage} /><Route path="/orders" component={OrdersPage} /><Route path="/orders/:id" component={OrderDetailPage} /><Route path="/new-order" component={NewOrderPage} /><Route path="/profile" component={ProfilePage} /><Route component={NotFound} /></Switch></RoutedErrorBoundary></AppShell>;
 }
 
+function LoginGate({ children }: { children: ReactNode }) {
+  const [isReady, setIsReady] = useState(false);
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setAuthFailureHandler(() => {
+      webToken = null;
+      sessionStorage.removeItem('operator-access-token');
+      setError('Сессия истекла. Войдите снова.');
+    });
+    setIsReady(true);
+    return () => setAuthFailureHandler(null);
+  }, []);
+
+  if (!isReady) return null;
+  if (webToken) return <>{children}</>;
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setError('');
+    try {
+      const response = await login({ password });
+      webToken = response.access_token;
+      sessionStorage.setItem('operator-access-token', webToken);
+      setPassword('');
+    } catch (loginError) {
+      setError(getApiErrorMessage(loginError, 'Проверьте пароль оператора и попробуйте ещё раз.'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[hsl(var(--background))] px-5">
+      <form onSubmit={(event) => void submit(event)} className="w-full max-w-md rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-7 shadow-[var(--shadow-md)]">
+        <p className="eyebrow text-[hsl(var(--primary))]">Внутренний доступ</p>
+        <h1 className="mt-3 text-3xl font-extrabold">Вход оператора</h1>
+        <p className="mt-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">Введите пароль, чтобы открыть заявки и оформить новый заказ.</p>
+        <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" autoComplete="current-password" className="field-control mt-6" placeholder="Пароль оператора" />
+        {error ? <p className="mt-3 text-xs font-semibold text-red-700">{error}</p> : null}
+        <button type="submit" disabled={!password || isSubmitting} className="primary-button mt-5 w-full justify-center disabled:opacity-50">{isSubmitting ? 'Проверка…' : 'Войти'}</button>
+      </form>
+    </div>
+  );
+}
+
 function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Router /></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider>;
+  return <QueryClientProvider client={queryClient}><TooltipProvider><LoginGate><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Router /></WouterRouter><Toaster /></LoginGate></TooltipProvider></QueryClientProvider>;
 }
 
 export default App;

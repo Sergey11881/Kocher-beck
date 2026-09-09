@@ -1,7 +1,13 @@
 import json
+import base64
+import hashlib
+import hmac
 import os
+import re
 import sqlite3
+import time
 import uuid
+from collections import defaultdict, deque
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -19,7 +25,35 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
-CORS(app)
+
+def configured_origins():
+    return [
+        origin.strip().rstrip("/")
+        for origin in os.environ.get("API_ALLOWED_ORIGINS", "").split(",")
+        if origin.strip() and origin.strip() != "*"
+    ]
+
+
+CORS(
+    app,
+    origins=configured_origins(),
+    methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
+
+AUTH_TOKEN_TTL_SECONDS = 30 * 60
+LOGIN_WINDOW_SECONDS = 5 * 60
+LOGIN_MAX_ATTEMPTS = 5
+ORDER_WINDOW_SECONDS = 60
+ORDER_MAX_ATTEMPTS = 10
+MAX_FILES_PER_ORDER = 10
+MAX_FILE_SIZE = 45 * 1024 * 1024
+ALLOWED_EXTENSIONS = {
+    ".pdf", ".dxf", ".dwg", ".step", ".stp", ".ai", ".zip",
+    ".jpg", ".jpeg", ".png", ".webp", ".heic", ".svg",
+}
+BLOCKED_EXTENSIONS = {".html", ".htm", ".js", ".mjs", ".cjs", ".css"}
+rate_limits = defaultdict(deque)
 
 PRODUCTS = {
     "magnetic": {
@@ -198,6 +232,116 @@ def error(message, status=400):
     return jsonify({"error": message}), status
 
 
+def unauthorized():
+    return error("Требуется авторизация.", 401)
+
+
+def token_part(value):
+    return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
+
+
+def token_bytes(value):
+    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+
+
+def issue_token():
+    secret = os.environ.get("API_AUTH_SECRET", "")
+    now = int(time.time())
+    payload = f"operator|{now}|{now + AUTH_TOKEN_TTL_SECONDS}".encode()
+    signature = hmac.new(secret.encode(), payload, hashlib.sha256).digest()
+    return f"{token_part(payload)}.{token_part(signature)}"
+
+
+def valid_token(token):
+    secret = os.environ.get("API_AUTH_SECRET", "")
+    if not secret or not token or token.count(".") != 1:
+        return False
+    try:
+        encoded_payload, encoded_signature = token.split(".", 1)
+        payload = token_bytes(encoded_payload)
+        signature = token_bytes(encoded_signature)
+        expected = hmac.new(secret.encode(), payload, hashlib.sha256).digest()
+        subject, issued_at, expires_at = payload.decode().split("|")
+        now = int(time.time())
+        return (
+            subject == "operator"
+            and int(issued_at) <= now
+            and now < int(expires_at)
+            and hmac.compare_digest(signature, expected)
+        )
+    except (ValueError, TypeError, UnicodeDecodeError):
+        return False
+
+
+def require_auth():
+    authorization = request.headers.get("Authorization", "")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not valid_token(token.strip()):
+        return unauthorized()
+    return None
+
+
+def rate_limited(key, limit, window):
+    now = time.monotonic()
+    attempts = rate_limits[key]
+    while attempts and now - attempts[0] >= window:
+        attempts.popleft()
+    if len(attempts) >= limit:
+        return True
+    attempts.append(now)
+    return False
+
+
+def extension_for(uploaded):
+    safe_name = secure_filename(uploaded.filename or "")
+    return Path(safe_name).suffix.lower()
+
+
+def has_valid_signature(extension, content):
+    if extension == ".pdf":
+        return content.startswith(b"%PDF-")
+    if extension == ".zip":
+        return content.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"))
+    if extension in {".jpg", ".jpeg"}:
+        return content.startswith(b"\xff\xd8\xff")
+    if extension == ".png":
+        return content.startswith(b"\x89PNG\r\n\x1a\n")
+    if extension == ".webp":
+        return len(content) >= 12 and content[:4] == b"RIFF" and content[8:12] == b"WEBP"
+    if extension == ".svg":
+        return b"<svg" in content[:4096].lower()
+    return True
+
+
+def validate_uploads(product, file_fields):
+    declared = file_fields
+    allowed_fields = {field[0] for field in product["fields"] if field[2] == "file"}
+    if not isinstance(declared, list) or any(
+        not isinstance(field, str) or field not in allowed_fields for field in declared
+    ):
+        return "Параметры файлов заказа некорректны."
+    if len(request.files.getlist("files")) > MAX_FILES_PER_ORDER:
+        return "Можно прикрепить не более 10 файлов."
+    for field_name in request.files:
+        if field_name != "files":
+            return "Файлы должны передаваться в поле files."
+    for uploaded in request.files.getlist("files"):
+        if not uploaded or not uploaded.filename:
+            return "Имя файла не указано."
+        extension = extension_for(uploaded)
+        if extension in BLOCKED_EXTENSIONS or extension not in ALLOWED_EXTENSIONS:
+            return "Тип файла не поддерживается."
+        content = uploaded.read(MAX_FILE_SIZE + 1)
+        uploaded.seek(0)
+        if not content:
+            return "Пустые файлы не допускаются."
+        if len(content) > MAX_FILE_SIZE:
+            return "Размер одного файла не должен превышать 45 МБ."
+        if not has_valid_signature(extension, content):
+            return "Содержимое файла не соответствует его расширению."
+    return None
+
+
 init_db()
 
 
@@ -223,6 +367,24 @@ def healthz():
     return jsonify({"status": "ok"})
 
 
+@app.post("/api/auth/login")
+def login():
+    key = f"login:{request.remote_addr or 'unknown'}"
+    if rate_limited(key, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_SECONDS):
+        return error("Слишком много попыток входа. Попробуйте позже.", 429)
+    configured_password = os.environ.get("API_OPERATOR_PASSWORD", "")
+    password = request.get_json(silent=True)
+    supplied_password = password.get("password", "") if isinstance(password, dict) else ""
+    if (
+        not configured_password
+        or not isinstance(supplied_password, str)
+        or not hmac.compare_digest(supplied_password, configured_password)
+        or not os.environ.get("API_AUTH_SECRET")
+    ):
+        return unauthorized()
+    return jsonify({"access_token": issue_token(), "token_type": "Bearer", "expires_in": AUTH_TOKEN_TTL_SECONDS})
+
+
 @app.get("/api/products")
 def products():
     return jsonify([product_payload(key, product) for key, product in PRODUCTS.items()])
@@ -230,6 +392,9 @@ def products():
 
 @app.get("/api/orders")
 def list_orders():
+    auth_error = require_auth()
+    if auth_error:
+        return auth_error
     connection = get_db()
     rows = connection.execute("SELECT * FROM orders ORDER BY id DESC").fetchall()
     connection.close()
@@ -238,6 +403,12 @@ def list_orders():
 
 @app.post("/api/orders")
 def create_order():
+    auth_error = require_auth()
+    if auth_error:
+        return auth_error
+    rate_key = f"orders:{request.remote_addr or 'unknown'}"
+    if rate_limited(rate_key, ORDER_MAX_ATTEMPTS, ORDER_WINDOW_SECONDS):
+        return error("Слишком много заявок. Попробуйте позже.", 429)
     product_type = request.form.get("product_type", "").strip()
     if product_type not in PRODUCTS:
         return error("Не выбран корректный тип оснастки.")
@@ -250,6 +421,9 @@ def create_order():
         return error("Параметры заказа должны быть объектом.")
 
     product = PRODUCTS[product_type]
+    upload_error = validate_uploads(product, data.get("__file_fields", []))
+    if upload_error:
+        return error(upload_error, 400)
     calculated_repeat(product_type, data)
     missing = []
     file_fields = data.get("__file_fields", [])
@@ -309,6 +483,9 @@ def create_order():
 
 @app.get("/api/orders/<int:order_id>")
 def get_order(order_id):
+    auth_error = require_auth()
+    if auth_error:
+        return auth_error
     connection = get_db()
     row = connection.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
     connection.close()
@@ -319,7 +496,15 @@ def get_order(order_id):
 
 @app.get("/api/uploads/<path:filename>")
 def uploads(filename):
-    return send_from_directory(UPLOAD_DIR, filename)
+    auth_error = require_auth()
+    if auth_error:
+        return auth_error
+    if Path(filename).name != filename or not re.fullmatch(r"[a-f0-9]{32}\.[a-z0-9]+", filename):
+        return error("Файл не найден.", 404)
+    response = send_from_directory(UPLOAD_DIR, filename, mimetype="application/octet-stream", as_attachment=True)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 @app.errorhandler(413)

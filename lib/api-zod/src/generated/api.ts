@@ -35,6 +35,20 @@ export const GetProductsResponse = zod.array(GetProductsResponseItem)
 
 
 /**
+ * @summary Sign in as an operator
+ */
+export const LoginBody = zod.object({
+  "password": zod.string()
+})
+
+export const LoginResponse = zod.object({
+  "access_token": zod.string(),
+  "token_type": zod.enum(['Bearer']),
+  "expires_in": zod.number()
+})
+
+
+/**
  * @summary List customer orders
  */
 export const GetOrdersResponseItem = zod.object({
@@ -54,13 +68,17 @@ export const GetOrdersResponse = zod.array(GetOrdersResponseItem)
 /**
  * @summary Create a tooling order
  */
+export const createOrderBodyFilesMax = 10;
+
+
+
 export const CreateOrderBody = zod.object({
   "product_type": zod.string(),
   "client": zod.string().optional(),
   "contact": zod.string().optional(),
   "comment": zod.string().optional(),
   "data": zod.string().describe('JSON object with product-specific values'),
-  "files": zod.array(zod.instanceof(File)).optional().describe('Files are uploaded as repeated multipart fields named files.')
+  "files": zod.array(zod.instanceof(File)).max(createOrderBodyFilesMax).optional().describe('Files are uploaded as repeated multipart fields named files. Each file is limited to 45 MiB and the complete request to 50 MiB.')
 })
 
 export const CreateOrderResponse = zod.object({

@@ -5,6 +5,23 @@
  * API for print tooling orders
  * OpenAPI spec version: 0.2.0
  */
+export interface LoginRequest {
+  password: string;
+}
+
+export type LoginResponseTokenType = typeof LoginResponseTokenType[keyof typeof LoginResponseTokenType];
+
+
+export const LoginResponseTokenType = {
+  Bearer: 'Bearer',
+} as const;
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: LoginResponseTokenType;
+  expires_in: number;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -76,7 +93,10 @@ export type CreateOrderBody = {
   comment?: string;
   /** JSON object with product-specific values */
   data: string;
-  /** Files are uploaded as repeated multipart fields named files. */
+  /**
+     * Files are uploaded as repeated multipart fields named files. Each file is limited to 45 MiB and the complete request to 50 MiB.
+     * @maxItems 10
+     */
   files?: Blob[];
 };
 

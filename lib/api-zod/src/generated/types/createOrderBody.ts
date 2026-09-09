@@ -13,6 +13,9 @@ export type CreateOrderBody = {
   comment?: string;
   /** JSON object with product-specific values */
   data: string;
-  /** Files are uploaded as repeated multipart fields named files. */
+  /**
+     * Files are uploaded as repeated multipart fields named files. Each file is limited to 45 MiB and the complete request to 50 MiB.
+     * @maxItems 10
+     */
   files?: Blob[];
 };
