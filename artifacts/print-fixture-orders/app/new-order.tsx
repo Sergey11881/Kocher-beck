@@ -39,6 +39,10 @@ function calculateRepeat(productKey: string, values: Record<string, string>) {
   return `${(teeth * module).toFixed(5).replace(/\.?0+$/, '')} мм`;
 }
 
+function formatSummaryValue(value: string | undefined) {
+  return value?.trim() || 'Не указано';
+}
+
 function orderMailto(order: Pick<Order, 'order_number' | 'product_name' | 'client' | 'contact' | 'status' | 'comment' | 'data'>) {
   const lines = [
     `Номер заявки: ${order.order_number}`,
@@ -392,11 +396,14 @@ export default function NewOrderScreen() {
                   <Pressable onPress={() => void productsQuery.refetch()}><Text style={[styles.retryText, { color: colors.primary }]}>Повторить</Text></Pressable>
                 </View>
               ) : (
-                <View style={styles.productGrid}>
-                  {products.map((product) => (
-                    <ProductCard key={product.key} product={product} selected={selectedKey === product.key} onPress={() => selectProduct(product)} colors={colors} />
-                  ))}
-                </View>
+                <GlassSection style={styles.formSection}>
+                  <Text style={[styles.sectionLabel, { color: colors.primary }]}>ТИП ПРОДУКЦИИ</Text>
+                  <View style={styles.productGrid}>
+                    {products.map((product) => (
+                      <ProductCard key={product.key} product={product} selected={selectedKey === product.key} onPress={() => selectProduct(product)} colors={colors} />
+                    ))}
+                  </View>
+                </GlassSection>
               )}
             </>
           ) : null}
@@ -413,17 +420,20 @@ export default function NewOrderScreen() {
                   </Text>
                 </View>
               ) : null}
-              {selectedProduct.fields.map((field) => (
-                <FieldInput
-                  key={field.key}
-                  field={field}
-                  value={values[field.key] ?? ''}
-                  file={files[field.key]}
-                  onChange={(value) => updateValue(field.key, value)}
-                  onPickFile={() => void pickFile(field.key)}
-                  colors={colors}
-                />
-              ))}
+              <GlassSection style={styles.formSection}>
+                <Text style={[styles.sectionLabel, { color: colors.primary }]}>ПАРАМЕТРЫ И ВЛОЖЕНИЯ</Text>
+                {selectedProduct.fields.map((field) => (
+                  <FieldInput
+                    key={field.key}
+                    field={field}
+                    value={values[field.key] ?? ''}
+                    file={files[field.key]}
+                    onChange={(value) => updateValue(field.key, value)}
+                    onPickFile={() => void pickFile(field.key)}
+                    colors={colors}
+                  />
+                ))}
+              </GlassSection>
             </>
           ) : null}
 
@@ -431,6 +441,13 @@ export default function NewOrderScreen() {
             <>
               <Text style={[styles.heading, { color: colors.foreground }]}>Контактные данные</Text>
               <Text style={[styles.description, { color: colors.mutedForeground }]}>Менеджер типографии свяжется с вами, чтобы подтвердить параметры заказа.</Text>
+              <GlassSection style={styles.summary}>
+                <Text style={[styles.sectionLabel, { color: colors.primary }]}>ПРОВЕРКА ЗАКАЗА</Text>
+                <Text style={[styles.summaryTitle, { color: colors.foreground }]}>{selectedProduct?.name}</Text>
+                <Text style={[styles.summaryLine, { color: colors.mutedForeground }]}>Контакт: {formatSummaryValue(contact)}</Text>
+                <Text style={[styles.summaryLine, { color: colors.mutedForeground }]}>Параметров заполнено: {Object.values(values).filter(Boolean).length}</Text>
+                <Text style={[styles.summaryLine, { color: colors.mutedForeground }]}>Вложений: {Object.keys(files).length}</Text>
+              </GlassSection>
               <View style={styles.fieldWrap}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Компания / заказчик</Text>
                 <TextInput value={client} onChangeText={setClient} placeholder="Название компании" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.input }]} />
@@ -480,6 +497,8 @@ const styles = StyleSheet.create({
   progressTrack: { height: 4, borderRadius: 2, marginTop: 14, overflow: 'hidden' },
   progressFill: { height: 4, borderRadius: 2 },
   form: { paddingHorizontal: 20, paddingTop: 31 },
+  formSection: { padding: 16, borderRadius: 22, marginBottom: 18 },
+  sectionLabel: { fontSize: 10, letterSpacing: 1.4, fontFamily: 'Inter_700Bold', marginBottom: 14 },
   heading: { fontSize: 24, lineHeight: 30, fontFamily: 'Inter_700Bold', marginBottom: 8 },
   description: { fontSize: 13, lineHeight: 19, fontFamily: 'Inter_400Regular', marginBottom: 26, maxWidth: 340 },
   loadingText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
@@ -521,6 +540,9 @@ const styles = StyleSheet.create({
   productMeta: { fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 5 },
   selectedIcon: { position: 'absolute', right: 14, top: 14 },
   fieldWrap: { marginBottom: 18 },
+  summary: { padding: 16, borderRadius: 20, marginBottom: 22 },
+  summaryTitle: { fontSize: 17, fontFamily: 'Inter_700Bold', marginBottom: 10 },
+  summaryLine: { fontSize: 13, lineHeight: 20, fontFamily: 'Inter_400Regular' },
   label: { fontSize: 12, fontFamily: 'Inter_600SemiBold', marginBottom: 8 },
   input: { minHeight: 50, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, fontSize: 14, fontFamily: 'Inter_400Regular' },
   textarea: { minHeight: 108, paddingTop: 14 },

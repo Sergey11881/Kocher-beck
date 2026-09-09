@@ -40,6 +40,7 @@ export default function OrderDetailsScreen() {
   const dataRows = Object.entries(order.data).filter(([key, value]) => key !== '__file_fields' && value);
   const stages = ['Получен', 'Ожидает согласования', 'В производстве', 'Доставка', 'Готов к отгрузке'];
   const currentStage = Math.max(0, stages.indexOf(order.status ?? 'Получен'));
+  const displayStatus = /готов|заверш/i.test(order.status ?? '') ? 'Готов' : /производ/i.test(order.status ?? '') ? 'Производство' : /работ|согласован/i.test(order.status ?? '') ? 'В работе' : 'Новый';
 
   return (
     <BackgroundAtmosphere>
@@ -53,7 +54,7 @@ export default function OrderDetailsScreen() {
       <View style={styles.content}>
         <View style={[styles.status, { backgroundColor: colors.accent }]}>
           <View style={[styles.statusDot, { backgroundColor: colors.accentForeground }]} />
-          <Text style={[styles.statusText, { color: colors.accentForeground }]}>Заявка принята</Text>
+          <Text style={[styles.statusText, { color: colors.accentForeground }]}>{displayStatus}</Text>
         </View>
         <Text style={[styles.title, { color: colors.foreground }]}>{order.order_number}</Text>
         <Text style={[styles.productName, { color: colors.primary }]}>{order.product_name}</Text>

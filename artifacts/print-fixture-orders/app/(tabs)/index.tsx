@@ -8,15 +8,19 @@ import { GlassSurface } from '@/components/GlassSurface';
 import { BackgroundAtmosphere } from '@/components/BackgroundAtmosphere';
 import { OrderCard } from '@/components/OrderCard';
 import { useAuth } from '@/context/AuthContext';
+import { useDrafts } from '@/context/OrdersContext';
 import { useColors } from '@/hooks/useColors';
 
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { logout } = useAuth();
+  const { drafts } = useDrafts();
   const ordersQuery = useGetOrders({ query: { queryKey: getGetOrdersQueryKey(), staleTime: 30_000 } });
   const orders = ordersQuery.data ?? [];
   const recentOrders = orders.slice(0, 2);
+  const productionCount = orders.filter((order) => /производ|работ|согласован/i.test(order.status ?? '')).length;
+  const readyCount = orders.filter((order) => /готов|заверш/i.test(order.status ?? '')).length;
 
   return (
     <BackgroundAtmosphere>
@@ -68,6 +72,25 @@ export default function HomeScreen() {
         <View style={[styles.heroOrbSmall, { backgroundColor: colors.primary }]} />
       </GlassSurface>
 
+      <View style={styles.metrics}>
+        <Metric label="Активные" value={orders.length - readyCount} icon="activity" />
+        <Metric label="В производстве" value={productionCount} icon="tool" />
+        <Metric label="Готовые" value={readyCount} icon="check-circle" />
+      </View>
+
+      {drafts.length > 0 ? (
+        <GlassSurface style={styles.draftBanner}>
+          <View style={[styles.quickIcon, { backgroundColor: colors.accent }]}>
+            <Feather name="edit-3" size={17} color={colors.accentForeground} />
+          </View>
+          <View style={styles.quickCopy}>
+            <Text style={[styles.quickTitle, { color: colors.foreground }]}>Незавершённый заказ</Text>
+            <Text style={[styles.quickHint, { color: colors.mutedForeground }]}>Продолжите заполнение черновика</Text>
+          </View>
+          <Feather name="chevron-right" size={17} color={colors.mutedForeground} />
+        </GlassSurface>
+      ) : null}
+
       <View style={styles.quickGrid}>
         <QuickAction icon="clock" title="История" hint="Все заявки" onPress={() => router.push('/orders')} />
         <QuickAction icon="refresh-cw" title="Повторить" hint="Из последних" onPress={() => recentOrders[0] ? router.push(`/new-order?repeat=${recentOrders[0].id}`) : router.push('/orders')} />
@@ -110,6 +133,17 @@ export default function HomeScreen() {
   );
 }
 
+function Metric({ label, value, icon }: { label: string; value: number; icon: ComponentProps<typeof Feather>['name'] }) {
+  const colors = useColors();
+  return (
+    <GlassSurface style={styles.metric}>
+      <Feather name={icon} size={16} color={colors.primary} />
+      <Text style={[styles.metricValue, { color: colors.foreground }]}>{Math.max(0, value)}</Text>
+      <Text numberOfLines={1} style={[styles.metricLabel, { color: colors.mutedForeground }]}>{label}</Text>
+    </GlassSurface>
+  );
+}
+
 function QuickAction({ icon, title, hint, onPress }: { icon: ComponentProps<typeof Feather>['name']; title: string; hint: string; onPress: () => void }) {
   const colors = useColors();
   return (
@@ -147,6 +181,11 @@ const styles = StyleSheet.create({
   primaryButton: { minHeight: 50, paddingHorizontal: 17, borderRadius: 16, flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 15 },
   primaryButtonText: { fontSize: 13, fontFamily: 'Inter_700Bold' },
   quickGrid: { flexDirection: 'row', gap: 10, marginHorizontal: 20, marginTop: 12 },
+  metrics: { flexDirection: 'row', gap: 8, marginHorizontal: 20, marginTop: 12 },
+  metric: { flex: 1, minHeight: 82, padding: 12, borderRadius: 18 },
+  metricValue: { fontSize: 22, fontFamily: 'Inter_700Bold', marginTop: 8 },
+  metricLabel: { fontSize: 9, fontFamily: 'Inter_500Medium', marginTop: 2 },
+  draftBanner: { marginHorizontal: 20, marginTop: 12, padding: 13, borderRadius: 18, flexDirection: 'row', alignItems: 'center', gap: 10 },
   quickAction: { flex: 1, minHeight: 74, padding: 12, borderRadius: 18, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
   quickIcon: { width: 34, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   quickCopy: { flex: 1 },
