@@ -1,6 +1,7 @@
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode } from 'react';
-import { Platform, StyleProp, StyleSheet, useColorScheme, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, useColorScheme, View, ViewStyle } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 
 export function GlassSurface({
@@ -19,9 +20,9 @@ export function GlassSurface({
   const colors = useColors();
   const isDark = useColorScheme() === 'dark';
   const depthStyles = {
-    light: { overlay: 0.24, shadowOpacity: 0.08, shadowRadius: 14 },
-    standard: { overlay: 0.34, shadowOpacity: 0.12, shadowRadius: 18 },
-    deep: { overlay: 0.42, shadowOpacity: 0.16, shadowRadius: 24 },
+    light: { shadowOpacity: 0.14, shadowRadius: 18 },
+    standard: { shadowOpacity: 0.2, shadowRadius: 24 },
+    deep: { shadowOpacity: 0.26, shadowRadius: 32 },
   }[depth];
   const surfaceStyle = [
     styles.surface,
@@ -35,23 +36,30 @@ export function GlassSurface({
     style,
   ];
 
-  if (Platform.OS === 'web') {
-    return (
-      <View style={[surfaceStyle, { backgroundColor: strong ? colors.glassStrong : colors.glass }]}>
-        <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.webHighlight, { backgroundColor: colors.glassHighlight, opacity: depthStyles.overlay }]} />
-        <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.bottomShade, { backgroundColor: colors.glassShadow }]} />
-        <View style={styles.content}>{children}</View>
-      </View>
-    );
-  }
-
   return (
     <View style={surfaceStyle}>
-      <BlurView intensity={intensity + (depth === 'deep' ? 6 : depth === 'light' ? -6 : 0)} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
-      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.glassOverlay, { backgroundColor: colors.glassHighlight, opacity: depthStyles.overlay }]} />
-      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.bottomShade, { backgroundColor: colors.glassShadow }]} />
+      <BlurView intensity={intensity + (depth === 'deep' ? 12 : depth === 'light' ? -4 : 5)} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: strong ? colors.glassStrong : colors.glass }]} />
+      <LinearGradient
+        pointerEvents="none"
+        colors={[colors.glassHighlight, 'transparent', colors.glassShadow]}
+        locations={[0, 0.48, 1]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.86, y: 1 }}
+        style={[StyleSheet.absoluteFill, styles.depthGradient]}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={['transparent', colors.glassHighlight, 'transparent']}
+        locations={[0.12, 0.42, 0.78]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0.72 }}
+        style={[StyleSheet.absoluteFill, styles.specular]}
+      />
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.sideShade, { backgroundColor: colors.glassShadow }]} />
       <View pointerEvents="none" style={[styles.innerEdge, { borderColor: colors.glassHighlight }]} />
-      <View pointerEvents="none" style={[styles.topHighlight, { backgroundColor: colors.glassBorder }]} />
+      <View pointerEvents="none" style={[styles.topHighlight, { backgroundColor: colors.glassHighlight }]} />
+      <View pointerEvents="none" style={[styles.bottomEdge, { backgroundColor: colors.glassShadow }]} />
       <View style={styles.content}>{children}</View>
     </View>
   );
@@ -66,10 +74,11 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 3,
   },
-  content: { flex: 1 },
-  glassOverlay: {},
-  webHighlight: {},
-  bottomShade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '34%', opacity: 0.2 },
-  innerEdge: { position: 'absolute', top: 1, left: 1, right: 1, bottom: 1, borderWidth: 1, borderRadius: 25, opacity: 0.2 },
-  topHighlight: { position: 'absolute', top: 1, left: 18, right: 18, height: 1, opacity: 0.8 },
+  content: { flex: 1, zIndex: 2 },
+  depthGradient: { opacity: 0.72 },
+  specular: { opacity: 0.42, transform: [{ rotate: '-8deg' }, { scale: 1.25 }] },
+  sideShade: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '16%', opacity: 0.12 },
+  innerEdge: { position: 'absolute', top: 2, left: 2, right: 2, bottom: 2, borderWidth: 1, borderRadius: 24, opacity: 0.35, zIndex: 1 },
+  topHighlight: { position: 'absolute', top: 1, left: 20, right: 20, height: 2, borderRadius: 2, opacity: 0.72, zIndex: 1 },
+  bottomEdge: { position: 'absolute', left: 18, right: 18, bottom: 1, height: 2, borderRadius: 2, opacity: 0.3, zIndex: 1 },
 });
