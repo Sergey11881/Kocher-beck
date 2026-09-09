@@ -30,63 +30,64 @@ export default function ProfileScreen() {
       showsVerticalScrollIndicator={false}
     >
       <BrandHeader title="Настройки" />
-      <Text style={[styles.eyebrow, { color: colors.primary }]}>НАСТРОЙКИ</Text>
-      <Text style={[styles.title, { color: colors.foreground }]}>Профиль</Text>
-      <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Данные для связи можно будет добавить перед отправкой заявки.</Text>
+      <View style={styles.content}>
+        <Text style={[styles.eyebrow, { color: colors.primary }]}>НАСТРОЙКИ</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>Профиль</Text>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Данные для связи можно будет добавить перед отправкой заявки.</Text>
 
-      <GlassSection depth="deep" style={styles.profileCard}>
-        <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-          <Feather name="user" size={24} color={colors.primaryForeground} />
-        </View>
-        <View>
-          <Text style={[styles.profileTitle, { color: colors.foreground }]}>Заказчик</Text>
-          <Text style={[styles.profileBody, { color: colors.mutedForeground }]}>Личные данные не заполнены</Text>
-        </View>
-      </GlassSection>
-
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Ваша активность</Text>
-      <View style={styles.stats}>
-        <GlassSection style={styles.stat}>
-          <Text style={[styles.statNumber, { color: colors.foreground }]}>{orders.length}</Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>отправлено</Text>
+        <GlassSection depth="deep" style={styles.profileCard}>
+          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+            <Feather name="user" size={24} color={colors.primaryForeground} />
+          </View>
+          <View>
+            <Text style={[styles.profileTitle, { color: colors.foreground }]}>Заказчик</Text>
+            <Text style={[styles.profileBody, { color: colors.mutedForeground }]}>Личные данные не заполнены</Text>
+          </View>
         </GlassSection>
-        <GlassSection style={styles.stat}>
-          <Text style={[styles.statNumber, { color: colors.foreground }]}>{drafts.length}</Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>черновиков</Text>
-        </GlassSection>
-      </View>
 
-      <GlassSection style={styles.note}>
-        <Feather name="shield" size={18} color={colors.secondaryForeground} />
-        <Text style={[styles.noteText, { color: colors.secondaryForeground }]}>Черновики хранятся только на этом устройстве. Отправленные заявки доступны типографии на сервере.</Text>
-      </GlassSection>
-      <Pressable onPress={() => void logout()} style={[styles.logoutButton, { borderColor: colors.border }]}>
-        <Text style={[styles.logoutText, { color: colors.primary }]}>Выйти из аккаунта оператора</Text>
-      </Pressable>
-
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Связь с менеджером</Text>
-      <Text style={[styles.contactHint, { color: colors.mutedForeground }]}>Нажмите на специалиста, чтобы позвонить и уточнить параметры заказа.</Text>
-      <View style={styles.managers}>
-        {managers.map((manager) => (
-          <GlassSection style={styles.managerCard}>
-          <Pressable
-            key={manager.phone}
-            testID={`manager-${manager.phone.replace(/\s/g, '-')}`}
-            onPress={() => void Linking.openURL(`tel:${manager.phone.replace(/\s/g, '')}`)}
-            style={({ pressed }) => [{ opacity: pressed ? 0.72 : 1 }]}
-          >
-            <View style={[styles.managerIcon, { backgroundColor: colors.secondary }]}>
-              <Feather name="phone" size={16} color={colors.primary} />
-            </View>
-            <View style={styles.managerCopy}>
-              <Text style={[styles.managerName, { color: colors.cardForeground }]}>{manager.name}</Text>
-              <Text style={[styles.managerRole, { color: colors.mutedForeground }]}>{manager.role}</Text>
-              <Text style={[styles.managerPhone, { color: colors.primary }]}>{manager.phone}</Text>
-            </View>
-            <Feather name="chevron-right" size={17} color={colors.mutedForeground} />
-          </Pressable>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Ваша активность</Text>
+        <View style={styles.stats}>
+          <GlassSection style={styles.stat}>
+            <Text style={[styles.statNumber, { color: colors.foreground }]}>{orders.length}</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>отправлено</Text>
           </GlassSection>
-        ))}
+          <GlassSection style={styles.stat}>
+            <Text style={[styles.statNumber, { color: colors.foreground }]}>{drafts.length}</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>черновиков</Text>
+          </GlassSection>
+        </View>
+
+        <GlassSection style={styles.note}>
+          <Feather name="shield" size={18} color={colors.secondaryForeground} />
+          <Text style={[styles.noteText, { color: colors.secondaryForeground }]}>Черновики хранятся только на этом устройстве. Отправленные заявки доступны типографии на сервере.</Text>
+        </GlassSection>
+        <Pressable onPress={() => void logout()} style={[styles.logoutButton, { borderColor: colors.border }]}>
+          <Text style={[styles.logoutText, { color: colors.primary }]}>Выйти из аккаунта оператора</Text>
+        </Pressable>
+
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Связь с менеджером</Text>
+        <Text style={[styles.contactHint, { color: colors.mutedForeground }]}>Нажмите на специалиста, чтобы позвонить и уточнить параметры заказа.</Text>
+        <View style={styles.managers}>
+          {managers.map((manager) => (
+            <GlassSection key={manager.phone} style={styles.managerCard}>
+              <Pressable
+                testID={`manager-${manager.phone.replace(/\s/g, '-')}`}
+                onPress={() => void Linking.openURL(`tel:${manager.phone.replace(/\s/g, '')}`)}
+                style={({ pressed }) => [{ opacity: pressed ? 0.72 : 1 }]}
+              >
+                <View style={[styles.managerIcon, { backgroundColor: colors.secondary }]}>
+                  <Feather name="phone" size={16} color={colors.primary} />
+                </View>
+                <View style={styles.managerCopy}>
+                  <Text style={[styles.managerName, { color: colors.cardForeground }]}>{manager.name}</Text>
+                  <Text style={[styles.managerRole, { color: colors.mutedForeground }]}>{manager.role}</Text>
+                  <Text style={[styles.managerPhone, { color: colors.primary }]}>{manager.phone}</Text>
+                </View>
+                <Feather name="chevron-right" size={17} color={colors.mutedForeground} />
+              </Pressable>
+            </GlassSection>
+          ))}
+        </View>
       </View>
     </ScrollView>
     </BackgroundAtmosphere>
@@ -95,6 +96,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  content: { paddingHorizontal: 8 },
   eyebrow: { fontSize: 10, letterSpacing: 1.4, fontFamily: 'Inter_700Bold', marginBottom: 6 },
   title: { fontSize: 28, lineHeight: 34, fontFamily: 'Inter_700Bold' },
   subtitle: { fontSize: 13, lineHeight: 19, fontFamily: 'Inter_400Regular', marginTop: 7, maxWidth: 310 },
