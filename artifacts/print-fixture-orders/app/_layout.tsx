@@ -16,10 +16,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { OrdersProvider } from '@/context/OrdersContext';
 import { setBaseUrl } from '@workspace/api-client-react';
 import { LogoAssemblyIntro } from '@/components/LogoAssemblyIntro';
+import { ApiConfigurationError } from '@/components/ApiConfigurationError';
+import { getApiConfiguration } from '@/config/api';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
-setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
+const apiConfiguration = getApiConfiguration();
+setBaseUrl(apiConfiguration.baseUrl);
 
 const queryClient = new QueryClient();
 
@@ -52,16 +55,20 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <OrdersProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider>
-                <RootLayoutNav />
-                {showIntro ? <LogoAssemblyIntro onComplete={finishIntro} /> : null}
-              </KeyboardProvider>
-            </GestureHandlerRootView>
-          </OrdersProvider>
-        </QueryClientProvider>
+        {apiConfiguration.error ? (
+          <ApiConfigurationError message={apiConfiguration.error} />
+        ) : (
+          <QueryClientProvider client={queryClient}>
+            <OrdersProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <KeyboardProvider>
+                  <RootLayoutNav />
+                  {showIntro ? <LogoAssemblyIntro onComplete={finishIntro} /> : null}
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </OrdersProvider>
+          </QueryClientProvider>
+        )}
       </ErrorBoundary>
     </SafeAreaProvider>
   );
