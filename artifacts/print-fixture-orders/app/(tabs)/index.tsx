@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { getApiErrorMessage, getGetOrdersQueryKey, useGetOrders } from '@workspace/api-client-react';
+import { getApiErrorMessage, getGetOrdersQueryKey, OrderSummary, useGetOrders } from '@workspace/api-client-react';
 import { router } from 'expo-router';
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { ComponentProps } from 'react';
@@ -20,8 +20,10 @@ export default function HomeScreen() {
   const ordersQuery = useGetOrders({ query: { queryKey: getGetOrdersQueryKey(), staleTime: 30_000 } });
   const orders = ordersQuery.data ?? [];
   const recentOrders = orders.slice(0, 2);
-  const productionCount = orders.filter((order) => /производ|работ|согласован/i.test(order.status ?? '')).length;
+  const productionCount = orders.filter((order) => /производ/i.test(order.status ?? '')).length;
   const readyCount = orders.filter((order) => /готов|заверш/i.test(order.status ?? '')).length;
+  const activeCount = orders.filter((order) => !/готов|заверш/i.test(order.status ?? '')).length;
+  const latestOrder = orders[0];
 
   return (
     <BackgroundAtmosphere>
@@ -67,22 +69,24 @@ export default function HomeScreen() {
       </GlassSurface>
 
       <View style={styles.metrics}>
-        <Metric label="Активные" value={orders.length - readyCount} icon="activity" />
+        <Metric label="Активные" value={activeCount} icon="activity" />
         <Metric label="В производстве" value={productionCount} icon="tool" />
         <Metric label="Готовые" value={readyCount} icon="check-circle" />
       </View>
 
       {drafts.length > 0 ? (
-        <GlassSurface style={styles.draftBanner}>
+        <Pressable onPress={() => router.push('/new-order')} style={({ pressed }) => [{ opacity: pressed ? 0.76 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] }]}>
+          <GlassSurface style={styles.draftBanner}>
           <View style={[styles.quickIcon, { backgroundColor: colors.accent }]}>
             <Feather name="edit-3" size={17} color={colors.accentForeground} />
           </View>
           <View style={styles.quickCopy}>
-            <Text style={[styles.quickTitle, { color: colors.foreground }]}>Незавершённый заказ</Text>
-            <Text style={[styles.quickHint, { color: colors.mutedForeground }]}>Продолжите заполнение черновика</Text>
+            <Text style={[styles.quickTitle, { color: colors.foreground }]}>Продолжить заказ</Text>
+            <Text style={[styles.quickHint, { color: colors.mutedForeground }]}>{drafts[0].productType || 'Незавершённый черновик'}</Text>
           </View>
           <Feather name="chevron-right" size={17} color={colors.mutedForeground} />
-        </GlassSurface>
+          </GlassSurface>
+        </Pressable>
       ) : null}
 
       <View style={styles.quickGrid}>
@@ -93,16 +97,17 @@ export default function HomeScreen() {
       <View style={styles.sectionHeader}>
         <View>
           <Text style={[styles.sectionKicker, { color: colors.mutedForeground }]}>АКТИВНОСТЬ</Text>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Последние заявки</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Заказы</Text>
         </View>
-        {orders.length > 0 ? (
-          <Pressable testID="see-all-orders" onPress={() => router.push('/orders')}>
-            <Text style={[styles.link, { color: colors.primary }]}>Все</Text>
-          </Pressable>
-        ) : null}
       </View>
 
-      {ordersQuery.isError ? (
+      {ordersQuery.isLoading ? (
+        <GlassSurface style={styles.loadingCard}>
+          <View style={[styles.loadingLine, { backgroundColor: colors.glassHighlight }]} />
+          <View style={[styles.loadingLineShort, { backgroundColor: colors.glassHighlight }]} />
+          <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Загружаем ваши заказы…</Text>
+        </GlassSurface>
+      ) : ordersQuery.isError ? (
         <GlassSurface style={styles.empty}>
           <Feather name="wifi-off" size={22} color={colors.primary} />
           <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Не удалось загрузить заявки</Text>
@@ -112,7 +117,16 @@ export default function HomeScreen() {
           </Pressable>
         </GlassSurface>
       ) : recentOrders.length > 0 ? (
-        recentOrders.map((order) => <OrderCard key={order.id} order={order} onPress={() => router.push(`/order/${order.id}`)} />)
+        <>
+          {latestOrder ? <LatestOrder order={latestOrder} onPress={() => router.push(`/order/${latestOrder.id}`)} onRepeat={() => router.push(`/new-order?repeat=${latestOrder.id}`)} /> : null}
+          <View style={styles.recentHeader}>
+            <Text style={[styles.recentTitle, { color: colors.foreground }]}>Последние заказы</Text>
+            <Pressable testID="see-all-orders" onPress={() => router.push('/orders')}>
+              <Text style={[styles.link, { color: colors.primary }]}>Все заказы</Text>
+            </Pressable>
+          </View>
+          {recentOrders.slice(1).map((order) => <OrderCard key={order.id} order={order} onPress={() => router.push(`/order/${order.id}`)} />)}
+        </>
       ) : (
         <GlassSurface style={styles.empty}>
           <View style={[styles.emptyIcon, { backgroundColor: colors.accent }]}>
@@ -120,10 +134,36 @@ export default function HomeScreen() {
           </View>
           <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Пространство для первой заявки</Text>
           <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>Создайте заказ, чтобы передать типографии все параметры в одном месте.</Text>
+          <GlassButton label="Создать первый заказ" icon="arrow-right" variant="primary" onPress={() => router.push('/new-order')} style={styles.emptyAction} />
         </GlassSurface>
       )}
       </ScrollView>
     </BackgroundAtmosphere>
+  );
+}
+
+function LatestOrder({ order, onPress, onRepeat }: { order: OrderSummary; onPress: () => void; onRepeat: () => void }) {
+  const colors = useColors();
+  const date = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(new Date(order.created_at));
+  return (
+    <GlassSurface depth="deep" style={styles.latestCard}>
+      <Pressable onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.78 : 1 }]}>
+        <View style={styles.latestTop}>
+          <Text style={[styles.sectionKicker, { color: colors.primary }]}>ПОСЛЕДНИЙ ЗАКАЗ</Text>
+          <Feather name="arrow-up-right" size={17} color={colors.mutedForeground} />
+        </View>
+        <Text style={[styles.latestNumber, { color: colors.foreground }]}>{order.order_number}</Text>
+        <Text style={[styles.latestProduct, { color: colors.secondaryForeground }]} numberOfLines={1}>{order.product_name}</Text>
+        <Text style={[styles.latestMeta, { color: colors.mutedForeground }]}>{date}{order.client ? ` · ${order.client}` : ''}</Text>
+        <View style={styles.latestBottom}>
+          <Text style={[styles.latestStatus, { color: colors.accentForeground }]}>{order.status || 'Новый'}</Text>
+          <Pressable onPress={onRepeat} style={({ pressed }) => [styles.repeatLink, { borderColor: colors.border, opacity: pressed ? 0.65 : 1 }]}>
+            <Feather name="refresh-cw" size={13} color={colors.primary} />
+            <Text style={[styles.repeatText, { color: colors.primary }]}>Повторить</Text>
+          </Pressable>
+        </View>
+      </Pressable>
+    </GlassSurface>
   );
 }
 
@@ -195,4 +235,20 @@ const styles = StyleSheet.create({
   emptyBody: { fontSize: 13, lineHeight: 19, fontFamily: 'Inter_400Regular', maxWidth: 300 },
   retry: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, marginTop: 15, alignSelf: 'flex-start' },
   retryText: { fontSize: 12, fontFamily: 'Inter_700Bold' },
+  loadingCard: { marginHorizontal: 20, minHeight: 165, padding: 20, justifyContent: 'center' },
+  loadingLine: { height: 14, width: '68%', borderRadius: 7, marginBottom: 12 },
+  loadingLineShort: { height: 10, width: '42%', borderRadius: 5, marginBottom: 18 },
+  loadingText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  latestCard: { marginHorizontal: 20, padding: 18, borderRadius: 22 },
+  latestTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  latestNumber: { fontSize: 24, fontFamily: 'Inter_700Bold', marginTop: 14 },
+  latestProduct: { fontSize: 14, fontFamily: 'Inter_600SemiBold', marginTop: 5 },
+  latestMeta: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 7 },
+  latestBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 18 },
+  latestStatus: { fontSize: 12, fontFamily: 'Inter_700Bold' },
+  repeatLink: { minHeight: 34, borderWidth: 1, borderRadius: 11, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  repeatText: { fontSize: 11, fontFamily: 'Inter_700Bold' },
+  recentHeader: { marginHorizontal: 20, marginTop: 24, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  recentTitle: { fontSize: 16, fontFamily: 'Inter_700Bold' },
+  emptyAction: { marginTop: 18, alignSelf: 'flex-start' },
 });
