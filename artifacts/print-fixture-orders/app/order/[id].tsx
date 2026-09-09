@@ -4,6 +4,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
+import { BackgroundAtmosphere } from '@/components/BackgroundAtmosphere';
+import { BrandHeader } from '@/components/BrandHeader';
+import { GlassSection } from '@/components/GlassSection';
 
 export default function OrderDetailsScreen() {
   const colors = useColors();
@@ -39,18 +42,13 @@ export default function OrderDetailsScreen() {
   const currentStage = Math.max(0, stages.indexOf(order.status ?? 'Получен'));
 
   return (
+    <BackgroundAtmosphere>
     <ScrollView
-      style={[styles.screen, { backgroundColor: colors.background }]}
+      style={styles.screen}
       contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 40 }}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.topBar}>
-        <Pressable testID="back-from-order" onPress={() => router.back()} style={styles.iconButton}>
-          <Feather name="arrow-left" size={22} color={colors.foreground} />
-        </Pressable>
-        <Text style={[styles.topTitle, { color: colors.foreground }]}>Детали заявки</Text>
-        <View style={styles.iconButton} />
-      </View>
+      <BrandHeader title="Детали заявки" action="arrow-left" actionLabel="Назад" onAction={() => router.back()} />
 
       <View style={styles.content}>
         <View style={[styles.status, { backgroundColor: colors.accent }]}>
@@ -74,29 +72,29 @@ export default function OrderDetailsScreen() {
           <Text style={[styles.repeatText, { color: colors.primary }]}>Повторить заказ</Text>
         </Pressable>
 
-        <View style={[styles.detailsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <GlassSection style={styles.detailsCard}>
           <DetailRow label="Компания / заказчик" value={order.client} colors={colors} />
           <DetailRow label="Контактное лицо" value={order.contact} colors={colors} />
           {dataRows.map(([label, value]) => (
             <DetailRow key={label} label={label} value={String(value)} colors={colors} />
           ))}
-        </View>
+        </GlassSection>
 
         {order.files.length > 0 ? (
-          <View style={[styles.files, { backgroundColor: colors.secondary }]}>
+          <GlassSection style={styles.files}>
             <View style={styles.filesHeader}>
               <Feather name="paperclip" size={17} color={colors.secondaryForeground} />
               <Text style={[styles.filesLabel, { color: colors.secondaryForeground }]}>Прикреплено файлов: {order.files.length}</Text>
             </View>
             <Text style={[styles.filesHint, { color: colors.mutedForeground }]}>Файлы сохранены на сервере типографии вместе с заявкой.</Text>
-          </View>
+          </GlassSection>
         ) : null}
 
         {order.comment ? (
-          <View style={[styles.notes, { backgroundColor: colors.secondary }]}>
+          <GlassSection style={styles.notes}>
             <Text style={[styles.notesLabel, { color: colors.secondaryForeground }]}>Комментарий</Text>
             <Text style={[styles.notesText, { color: colors.secondaryForeground }]}>{order.comment}</Text>
-          </View>
+          </GlassSection>
         ) : null}
 
         <View style={[styles.info, { borderColor: colors.border }]}>
@@ -105,6 +103,7 @@ export default function OrderDetailsScreen() {
         </View>
       </View>
     </ScrollView>
+    </BackgroundAtmosphere>
   );
 }
 
@@ -123,10 +122,10 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 13, lineHeight: 19, textAlign: 'center', maxWidth: 300, marginBottom: 8 },
   link: { fontSize: 13, fontFamily: 'Inter_700Bold' },
   screen: { flex: 1 },
-  topBar: { height: 52, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  topBar: { height: 44, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   iconButton: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   topTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  content: { paddingHorizontal: 20, paddingTop: 22 },
+  content: { paddingHorizontal: 20, paddingTop: 14 },
   status: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 7 },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   statusText: { fontSize: 11, fontFamily: 'Inter_700Bold' },
@@ -139,7 +138,7 @@ const styles = StyleSheet.create({
   stageLabel: { fontSize: 8, lineHeight: 11, fontFamily: 'Inter_500Medium', marginTop: 5 },
   repeatButton: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: 11, paddingHorizontal: 11, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 18 },
   repeatText: { fontSize: 12, fontFamily: 'Inter_700Bold' },
-  detailsCard: { borderRadius: 18, borderWidth: 1, paddingHorizontal: 16 },
+  detailsCard: { borderRadius: 18, paddingHorizontal: 16 },
   row: { minHeight: 51, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 18, borderBottomWidth: 1 },
   rowLabel: { fontSize: 12, fontFamily: 'Inter_400Regular', flex: 1 },
   rowValue: { fontSize: 13, fontFamily: 'Inter_600SemiBold', flex: 1.2, textAlign: 'right' },

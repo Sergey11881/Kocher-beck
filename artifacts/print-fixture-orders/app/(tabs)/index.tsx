@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { getApiErrorMessage, getGetOrdersQueryKey, useGetOrders } from '@workspace/api-client-react';
 import { router } from 'expo-router';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { ComponentProps } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassSurface } from '@/components/GlassSurface';
@@ -29,10 +29,8 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View>
           <View style={styles.brandRow}>
-            <View style={[styles.brandMark, { backgroundColor: colors.primary }]}>
-              <Text style={styles.brandMarkText}>K</Text>
-            </View>
-            <Text style={[styles.eyebrow, { color: colors.mutedForeground }]}>KOCHER+BECK</Text>
+            <Image source={require('@/assets/images/company-logo-icon.png')} style={styles.brandMark} resizeMode="contain" />
+            <Text style={[styles.eyebrow, { color: colors.foreground }]}>KOCHER+BECK</Text>
           </View>
           <Text style={[styles.greeting, { color: colors.foreground }]}>Добрый день</Text>
           <Text style={[styles.headerHint, { color: colors.mutedForeground }]}>Центр управления заказами</Text>
@@ -132,8 +130,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   header: { paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 13 },
-  brandMark: { width: 22, height: 22, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
-  brandMarkText: { color: '#fff', fontSize: 12, fontFamily: 'Inter_700Bold' },
+  brandMark: { width: 26, height: 26, borderRadius: 8 },
   eyebrow: { fontSize: 10, letterSpacing: 1.8, fontFamily: 'Inter_700Bold' },
   greeting: { fontSize: 29, lineHeight: 34, fontFamily: 'Inter_700Bold' },
   headerHint: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 5 },

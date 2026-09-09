@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OrderCard } from '@/components/OrderCard';
 import { GlassSurface } from '@/components/GlassSurface';
 import { BackgroundAtmosphere } from '@/components/BackgroundAtmosphere';
+import { BrandHeader } from '@/components/BrandHeader';
 import { useColors } from '@/hooks/useColors';
 
 export default function OrdersScreen() {
@@ -22,19 +23,7 @@ export default function OrdersScreen() {
         refreshControl={<RefreshControl refreshing={ordersQuery.isFetching} onRefresh={() => void ordersQuery.refetch()} tintColor={colors.primary} />}
         showsVerticalScrollIndicator={false}
       >
-      <View style={styles.header}>
-        <View>
-          <Text style={[styles.eyebrow, { color: colors.primary }]}>ИСТОРИЯ</Text>
-          <Text style={[styles.title, { color: colors.foreground }]}>Мои заявки</Text>
-        </View>
-        <Pressable
-          testID="orders-add-button"
-          onPress={() => router.push('/new-order')}
-          style={({ pressed }) => [styles.addButton, { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}
-        >
-          <Feather name="plus" size={20} color={colors.primaryForeground} />
-        </Pressable>
-      </View>
+      <BrandHeader title="Заявки" action="plus" actionLabel="Создать заявку" onAction={() => router.push('/new-order')} />
 
       <Text style={[styles.count, { color: colors.mutedForeground }]}>
         {ordersQuery.isError ? 'Сервер временно недоступен' : orders.length === 0 ? 'Пока нет заявок' : `${orders.length} ${orders.length === 1 ? 'заявка' : 'заявок'}`}

@@ -22,6 +22,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useDrafts } from '@/context/OrdersContext';
 import { useColors } from '@/hooks/useColors';
+import { BackgroundAtmosphere } from '@/components/BackgroundAtmosphere';
+import { GlassSection } from '@/components/GlassSection';
 
 type PickedFile = { uri: string; name: string; mimeType?: string };
 type Step = 0 | 1 | 2;
@@ -169,23 +171,13 @@ function ProductCard({
   const productImage = getProductImage(product.name);
 
   return (
-    <Pressable
-      testID={`product-${product.key}`}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.productCard,
-        {
-          backgroundColor: selected ? colors.foreground : colors.card,
-          borderColor: selected ? colors.primary : colors.border,
-          opacity: pressed ? 0.8 : 1,
-        },
-      ]}
-    >
+    <GlassSection depth={selected ? 'deep' : 'standard'} style={[styles.productCard, selected && { borderColor: colors.primary }]}>
+    <Pressable testID={`product-${product.key}`} onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.78 : 1 }]}>
       {productImage ? (
         <View
           style={[
             styles.productImageWrap,
-            { backgroundColor: selected ? colors.background : colors.secondary },
+            { backgroundColor: selected ? colors.accent : colors.secondary, borderColor: selected ? colors.primary : colors.border },
           ]}
         >
           <Image source={productImage} style={styles.productImage} resizeMode="contain" />
@@ -201,6 +193,7 @@ function ProductCard({
       </Text>
       {selected ? <Feather name="check-circle" size={19} color={colors.primary} style={styles.selectedIcon} /> : null}
     </Pressable>
+    </GlassSection>
   );
 }
 
@@ -352,7 +345,8 @@ export default function NewOrderScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+    <BackgroundAtmosphere>
+    <View style={styles.screen}>
       <View style={[styles.topBar, { paddingTop: insets.top + 8, borderBottomColor: colors.border }]}>
         <Pressable testID="close-order" onPress={() => router.back()} style={styles.iconButton}>
           <Feather name="x" size={22} color={colors.foreground} />
@@ -454,7 +448,7 @@ export default function NewOrderScreen() {
         </View>
       </KeyboardAwareScrollViewCompat>
 
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12, backgroundColor: colors.background, borderTopColor: colors.border }]}>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12, borderTopColor: colors.border }]}>
         {step > 0 ? (
           <Pressable testID="previous-step" onPress={() => setStep((current) => (current - 1) as Step)} style={styles.backButton}>
             <Feather name="arrow-left" size={18} color={colors.foreground} />
@@ -467,6 +461,7 @@ export default function NewOrderScreen() {
         </Pressable>
       </View>
     </View>
+    </BackgroundAtmosphere>
   );
 }
 
@@ -500,12 +495,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     padding: 14,
     position: 'relative',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderColor: 'rgba(255,255,255,0.58)',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.22,
-    shadowRadius: 28,
-    elevation: 10,
     overflow: 'hidden',
   },
   productImageWrap: {

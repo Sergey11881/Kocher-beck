@@ -3,6 +3,8 @@ import React, { createContext, ReactNode, useContext, useEffect, useMemo, useSta
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { login, setAuthFailureHandler, setAuthTokenGetter } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
+import { BackgroundAtmosphere } from '@/components/BackgroundAtmosphere';
+import { GlassSection } from '@/components/GlassSection';
 
 const TOKEN_KEY = 'operator-access-token';
 let currentToken: string | null = null;
@@ -96,8 +98,11 @@ function LoginScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.foreground }]}>Вход оператора</Text>
+    <BackgroundAtmosphere>
+    <View style={styles.container}>
+      <GlassSection depth="deep" style={styles.panel}>
+        <Text style={[styles.brand, { color: colors.foreground }]}>KOCHER+BECK</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>Вход оператора</Text>
       <Text style={[styles.message, { color: colors.mutedForeground }]}>Введите пароль, чтобы открыть заявки и отправить новый заказ.</Text>
       <TextInput
         value={password}
@@ -112,12 +117,16 @@ function LoginScreen() {
       <Pressable disabled={isSubmitting || !password} onPress={() => void submit()} style={[styles.button, { backgroundColor: colors.primary, opacity: isSubmitting || !password ? 0.5 : 1 }]}>
         <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>{isSubmitting ? 'Проверка…' : 'Войти'}</Text>
       </Pressable>
+      </GlassSection>
     </View>
+    </BackgroundAtmosphere>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  panel: { width: '100%', maxWidth: 400, padding: 24, borderRadius: 28 },
+  brand: { fontFamily: 'Inter_700Bold', fontSize: 12, letterSpacing: 2, color: '#e6002d', marginBottom: 22 },
   title: { fontFamily: 'Inter_700Bold', fontSize: 25, marginBottom: 10 },
   message: { maxWidth: 360, fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 21, textAlign: 'center', marginBottom: 22 },
   input: { width: '100%', maxWidth: 360, minHeight: 50, borderWidth: 1, borderRadius: 14, paddingHorizontal: 15, fontFamily: 'Inter_400Regular', fontSize: 15 },
