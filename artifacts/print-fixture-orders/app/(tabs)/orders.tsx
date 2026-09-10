@@ -14,6 +14,7 @@ export default function OrdersScreen() {
   const query = useGetOrders({ query: { queryKey: getGetOrdersQueryKey(), retry: false } });
   const [search, setSearch] = useState('');
   const orders = [...(query.data ?? [])]
+    .filter((order) => Number.isFinite(order.id))
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .filter((order) => `${order.order_number} ${order.product_name} ${order.status}`.toLowerCase().includes(search.trim().toLowerCase()));
 
@@ -48,7 +49,7 @@ export default function OrdersScreen() {
             </GlassCard>
           ) : orders.length ? (
             orders.map((order) => (
-              <Pressable key={order.id} onPress={() => router.push(`/order/${order.id}`)}>
+              <Pressable key={`order-${order.id}`} onPress={() => router.push(`/order/${order.id}`)}>
                 <GlassCard style={styles.card}>
                   <View style={styles.row}><Text style={[styles.number, { color: colors.foreground }]}>{order.order_number}</Text><Feather name="chevron-right" size={18} color={colors.mutedForeground} /></View>
                   <Text style={[styles.product, { color: colors.mutedForeground }]}>{order.product_name}</Text>
