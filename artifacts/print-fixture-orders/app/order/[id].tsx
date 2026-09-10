@@ -100,6 +100,9 @@ export default function OrderDetailsScreen() {
               <Feather name="paperclip" size={17} color={colors.secondaryForeground} />
               <Text style={[styles.filesLabel, { color: colors.secondaryForeground }]}>Прикреплено файлов: {order.files.length}</Text>
             </View>
+            {order.files.map((file) => (
+              <Text key={file} numberOfLines={1} style={[styles.fileName, { color: colors.secondaryForeground }]}>{file.split('/').pop() ?? file}</Text>
+            ))}
             <Text style={[styles.filesHint, { color: colors.mutedForeground }]}>Файлы сохранены на сервере типографии вместе с заявкой.</Text>
           </GlassSection>
         ) : null}
@@ -156,6 +159,7 @@ const styles = StyleSheet.create({
   filesHeader: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   filesLabel: { fontSize: 12, fontFamily: 'Inter_700Bold' },
   filesHint: { fontSize: 12, lineHeight: 18, fontFamily: 'Inter_400Regular', marginTop: 8 },
+  fileName: { fontSize: 12, marginTop: 10 },
   notes: { borderRadius: 17, padding: 16, marginTop: 14 },
   notesLabel: { fontSize: 12, fontFamily: 'Inter_700Bold', marginBottom: 8 },
   notesText: { fontSize: 13, lineHeight: 19, fontFamily: 'Inter_400Regular' },

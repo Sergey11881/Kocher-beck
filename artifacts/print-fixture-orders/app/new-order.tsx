@@ -6,7 +6,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassSection } from '@/components/GlassSection';
-import { useDrafts } from '@/context/OrdersContext';
+import { AttachmentSection } from '@/components/AttachmentSection';
+import { useDrafts, type DraftAttachment } from '@/context/OrdersContext';
 import { useColors } from '@/hooks/useColors';
 
 type Step = 0 | 1 | 2;
@@ -29,6 +30,7 @@ export default function NewOrderScreen() {
   const [selectedKey, setSelectedKey] = useState('');
   const [values, setValues] = useState<Record<string, string>>({});
   const [files, setFiles] = useState<Record<string, PickedFile>>({});
+  const [attachments, setAttachments] = useState<DraftAttachment[]>([]);
   const [client, setClient] = useState('');
   const [contact, setContact] = useState('');
   const [comment, setComment] = useState('');
@@ -52,6 +54,7 @@ export default function NewOrderScreen() {
       setClient(draft.client);
       setContact(draft.contact);
       setComment(draft.comment);
+      setAttachments(draft.attachments ?? []);
       if (draft.step === 1 || draft.step === 2) setStep(draft.step);
       return;
     }
@@ -64,6 +67,7 @@ export default function NewOrderScreen() {
     const hasDraftContent = Object.keys(values).length > 0
       || Boolean(client.trim() || contact.trim() || comment.trim())
       || Object.keys(files).length > 0
+      || attachments.length > 0
       || step > 0;
     if (!draftRef.current && !hasDraftContent) return;
     const timer = setTimeout(() => {
@@ -75,6 +79,7 @@ export default function NewOrderScreen() {
           comment,
           data: { ...values, __product_key: selectedProduct.key },
           fileNames: Object.values(files).map((file) => file.name),
+          attachments,
           step,
         },
         draftRef.current,
@@ -85,7 +90,7 @@ export default function NewOrderScreen() {
       });
     }, 900);
     return () => clearTimeout(timer);
-  }, [client, comment, contact, files, selectedProduct, saveDraft, values]);
+  }, [attachments, client, comment, contact, files, selectedProduct, saveDraft, values]);
 
   const updateValue = (key: string, value: string) => {
     setValues((current) => ({ ...current, [key]: value }));
@@ -131,6 +136,7 @@ export default function NewOrderScreen() {
         comment,
         data: { ...values, __product_key: selectedProduct.key },
         fileNames: Object.values(files).map((file) => file.name),
+        attachments,
         step,
       }, draftRef.current);
       draftRef.current = saved.id;
@@ -207,6 +213,7 @@ export default function NewOrderScreen() {
               <Text style={[styles.label, { color: colors.foreground }]}>Комментарий</Text>
               <TextInput value={comment} onChangeText={setComment} multiline placeholder="Дополнительные требования" placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.textarea, { color: colors.foreground, backgroundColor: colors.surfaceGlass, borderColor: colors.border }]} />
               <GlassSection style={styles.summary}><Text style={[styles.summaryTitle, { color: colors.foreground }]}>Проверьте перед сохранением</Text><Text style={[styles.summaryText, { color: colors.mutedForeground }]}>{selectedProduct?.name}</Text><Text style={[styles.summaryText, { color: colors.mutedForeground }]}>Заполнено полей: {Object.keys(values).length}</Text></GlassSection>
+              <AttachmentSection attachments={attachments} onChange={setAttachments} />
             </>
           ) : null}
         </View>

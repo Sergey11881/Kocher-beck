@@ -1,6 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+export interface DraftAttachment {
+  id: string;
+  name: string;
+  uri: string;
+  mimeType?: string;
+  size?: number;
+}
+
 export interface LocalDraft {
   id: string;
   productType: string;
@@ -9,6 +17,7 @@ export interface LocalDraft {
   comment: string;
   data: Record<string, string>;
   fileNames: string[];
+  attachments?: DraftAttachment[];
   step?: number;
   updatedAt: string;
 }

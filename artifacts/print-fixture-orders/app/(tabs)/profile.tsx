@@ -1,56 +1,98 @@
-import React from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import {
-  colors,
-  radius,
-  spacing,
-} from '../../constants/design';
+import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, radius, spacing } from '../../constants/design';
+import { hasManagerContact, managerContact } from '../../config/manager';
+import { useAppSettings } from '../../hooks/useAppSettings';
+import { useDrafts } from '../../context/OrdersContext';
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
+  const { drafts } = useDrafts();
+  const { settings, isLoading, error, setNotificationsEnabled } = useAppSettings();
+
+  const contactManager = async () => {
+    if (managerContact.phone) {
+      await Linking.openURL(`tel:${managerContact.phone}`);
+      return;
+    }
+    if (managerContact.email) {
+      await Linking.openURL(`mailto:${managerContact.email}`);
+      return;
+    }
+    Alert.alert('Контакт пока не настроен', 'Контакт менеджера будет добавлен в конфигурацию приложения.');
+  };
+
   return (
     <View style={styles.screen}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }}
       >
-        <Text style={styles.eyebrow}>KOCHER+BECK</Text>
-        <Text style={styles.title}>Профиль</Text>
+        <View style={styles.content}>
+          <Text style={styles.eyebrow}>KOCHER+BECK</Text>
+          <Text style={styles.title}>Профиль</Text>
 
-        <View style={styles.card}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>K+B</Text>
+          <View style={styles.card}>
+            <View style={styles.avatar}><Text style={styles.avatarText}>K+B</Text></View>
+            <View style={styles.cardCopy}>
+              <Text style={styles.cardTitle}>Клиент Kocher+Beck</Text>
+              <Text style={styles.cardText}>Авторизация пока отключена. Локальные черновики сохранены на устройстве.</Text>
+            </View>
           </View>
 
-          <View>
-            <Text style={styles.cardTitle}>Клиент Kocher+Beck</Text>
-            <Text style={styles.cardText}>
-              Профиль будет подключён на следующем этапе.
-            </Text>
+          <Text style={styles.section}>Менеджер</Text>
+          <View style={styles.setting}>
+            <View style={styles.settingIcon}><Feather name="message-circle" size={18} color={colors.accent} /></View>
+            <View style={styles.settingCopy}>
+              <Text style={styles.settingTitle}>{hasManagerContact ? managerContact.name || 'Менеджер Kocher+Beck' : 'Связь с менеджером'}</Text>
+              <Text style={styles.settingText}>{hasManagerContact ? 'Позвонить или написать менеджеру' : 'Контакт будет добавлен позже'}</Text>
+            </View>
+            <Pressable onPress={() => void contactManager()} style={styles.smallButton}>
+              <Text style={styles.smallButtonText}>{hasManagerContact ? 'Связаться' : 'Подробнее'}</Text>
+            </Pressable>
           </View>
-        </View>
 
-        <Text style={styles.section}>Настройки</Text>
+          <Text style={styles.section}>Настройки</Text>
+          <View style={styles.setting}>
+            <View style={styles.settingCopy}>
+              <Text style={styles.settingTitle}>Уведомления</Text>
+              <Text style={styles.settingText}>Push-уведомления backend пока не подключены. Настройка сохранена локально.</Text>
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+            </View>
+            {isLoading ? <ActivityIndicator color={colors.accent} /> : (
+              <Switch
+                value={settings.notificationsEnabled}
+                onValueChange={(value) => void setNotificationsEnabled(value).catch(() => undefined)}
+                trackColor={{ false: colors.surfaceElevated, true: colors.accentSoft }}
+                thumbColor={settings.notificationsEnabled ? colors.accent : colors.textMuted}
+              />
+            )}
+          </View>
+          <Pressable onPress={() => router.push('/drafts')} style={styles.setting}>
+            <View style={styles.settingCopy}>
+              <Text style={styles.settingTitle}>Черновики</Text>
+              <Text style={styles.settingText}>{drafts.length ? `${drafts.length} сохранено на устройстве` : 'Сохранённых черновиков нет'}</Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.textMuted} />
+          </Pressable>
+          <View style={styles.setting}>
+            <View style={styles.settingCopy}>
+              <Text style={styles.settingTitle}>Язык интерфейса</Text>
+              <Text style={styles.settingText}>Русский · изменение языка будет добавлено позже</Text>
+            </View>
+          </View>
 
-        <View style={styles.setting}>
-          <Text style={styles.settingTitle}>Уведомления</Text>
-          <Text style={styles.settingText}>Будут доступны позже</Text>
-        </View>
-
-        <View style={styles.setting}>
-          <Text style={styles.settingTitle}>Менеджер</Text>
-          <Text style={styles.settingText}>Связь с менеджером Kocher+Beck</Text>
-        </View>
-
-        <View style={styles.setting}>
-          <Text style={styles.settingTitle}>Безопасность</Text>
-          <Text style={styles.settingText}>
-            Авторизация временно отключена на этапе разработки.
-          </Text>
+          <Text style={styles.section}>О приложении</Text>
+          <View style={styles.setting}>
+            <Text style={styles.settingTitle}>Kocher+Beck Smart Order</Text>
+            <Text style={styles.settingText}>Точный заказ с первого раза. Версия 1.0.0</Text>
+          </View>
+          <View style={styles.setting}>
+            <Text style={styles.settingTitle}>Помощь</Text>
+            <Text style={styles.settingText}>Если вопрос требует менеджера, используйте раздел связи выше.</Text>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -58,97 +100,23 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: 58,
-    paddingBottom: 40,
-  },
-
-  eyebrow: {
-    color: colors.accent,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.8,
-  },
-
-  title: {
-    color: colors.text,
-    fontSize: 30,
-    fontWeight: '700',
-    marginTop: 4,
-    marginBottom: 24,
-  },
-
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 18,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surfaceGlass,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-
-  avatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-
-  avatarText: {
-    color: colors.white,
-    fontSize: 13,
-    fontWeight: '900',
-  },
-
-  cardTitle: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-
-  cardText: {
-    color: colors.textMuted,
-    fontSize: 11,
-    marginTop: 4,
-  },
-
-  section: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '700',
-    marginTop: 30,
-    marginBottom: 12,
-  },
-
-  setting: {
-    padding: 16,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceGlass,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 10,
-  },
-
-  settingTitle: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
-  settingText: {
-    color: colors.textMuted,
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 4,
-  },
+  screen: { flex: 1, backgroundColor: colors.background },
+  content: { paddingHorizontal: spacing.lg },
+  eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.8 },
+  title: { color: colors.text, fontSize: 30, fontWeight: '700', marginTop: 4, marginBottom: 24 },
+  card: { flexDirection: 'row', alignItems: 'center', padding: 18, borderRadius: radius.lg, backgroundColor: colors.surfaceGlass, borderWidth: 1, borderColor: colors.border },
+  avatar: { width: 54, height: 54, borderRadius: 18, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  avatarText: { color: colors.white, fontSize: 13, fontWeight: '900' },
+  cardCopy: { flex: 1 },
+  cardTitle: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  cardText: { color: colors.textMuted, fontSize: 11, lineHeight: 16, marginTop: 4 },
+  section: { color: colors.text, fontSize: 17, fontWeight: '700', marginTop: 28, marginBottom: 12 },
+  setting: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: radius.md, backgroundColor: colors.surfaceGlass, borderWidth: 1, borderColor: colors.border, marginBottom: 10 },
+  settingIcon: { width: 34, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft },
+  settingCopy: { flex: 1 },
+  settingTitle: { color: colors.text, fontSize: 14, fontWeight: '700' },
+  settingText: { color: colors.textMuted, fontSize: 11, lineHeight: 16, marginTop: 4 },
+  smallButton: { minHeight: 38, paddingHorizontal: 10, borderRadius: 11, justifyContent: 'center', backgroundColor: colors.accentSoft },
+  smallButtonText: { color: colors.accent, fontSize: 11, fontWeight: '800' },
+  error: { color: colors.accent, fontSize: 11, marginTop: 6 },
 });
