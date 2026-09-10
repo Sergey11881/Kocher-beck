@@ -18,7 +18,7 @@ export default function HomeScreen() {
       retry: false,
     },
   });
-  const orders = (ordersQuery.data ?? []).slice(0, 3);
+  const orders = Array.isArray(ordersQuery.data) ? ordersQuery.data.slice(0, 3) : [];
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
