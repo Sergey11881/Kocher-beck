@@ -8,6 +8,7 @@ export interface DraftAttachment {
   uri: string;
   mimeType?: string;
   size?: number;
+  fieldKey?: string;
 }
 
 export const TEMPLATE_VERSION = 1;

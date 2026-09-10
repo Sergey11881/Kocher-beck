@@ -8,6 +8,7 @@ export type AnalyticsEventName =
   | 'draft_restored'
   | 'order_opened'
   | 'order_repeated'
+  | 'order_submitted'
   | 'attachment_added'
   | 'attachment_removed'
   | 'template_created'
