@@ -16,7 +16,8 @@ export type AnalyticsEventName =
   | 'calculator_opened'
   | 'calculator_completed'
   | 'manager_contact_clicked'
-  | 'notification_settings_changed';
+  | 'notification_settings_changed'
+  | 'catalog_load_failed';
 
 export interface AnalyticsEvent {
   name: AnalyticsEventName;

@@ -27,6 +27,20 @@ function displayValue(value: string | undefined) {
   return value?.trim() || '—';
 }
 
+function getCatalogErrorMetadata(error: unknown): Record<string, string | number> {
+  if (!error || typeof error !== 'object') {
+    return { errorClass: typeof error };
+  }
+  const details = error as { name?: unknown; message?: unknown; status?: unknown; method?: unknown; url?: unknown };
+  return {
+    errorClass: typeof details.name === 'string' ? details.name : 'UnknownError',
+    endpoint: typeof details.url === 'string' ? details.url : '/api/products',
+    httpStatus: typeof details.status === 'number' ? details.status : 0,
+    method: typeof details.method === 'string' ? details.method : 'GET',
+    message: typeof details.message === 'string' ? details.message.slice(0, 240) : 'Request failed',
+  };
+}
+
 export function OrderForm() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -36,7 +50,7 @@ export function OrderForm() {
   const templateId = Array.isArray(params.template) ? params.template[0] : params.template;
   const calculatorParam = Array.isArray(params.calculator) ? params.calculator[0] : params.calculator;
   const { isLoading: draftsLoading, templatesLoading, saveDraft, getDraft, getTemplate } = useDrafts();
-  const productsQuery = useGetProducts({ query: { queryKey: getGetProductsQueryKey(), staleTime: 300_000 } });
+  const productsQuery = useGetProducts({ query: { queryKey: getGetProductsQueryKey(), staleTime: 300_000, retry: false } });
   const createOrder = useCreateOrder();
   const [step, setStep] = useState<Step>(0);
   const [selectedKey, setSelectedKey] = useState('');
@@ -62,6 +76,11 @@ export function OrderForm() {
       return undefined;
     }
   }, [calculatorParam]);
+
+  useEffect(() => {
+    if (!productsQuery.error) return;
+    track('catalog_load_failed', getCatalogErrorMetadata(productsQuery.error));
+  }, [productsQuery.error]);
 
   useEffect(() => {
     if (draftsLoading || templatesLoading || !products.length || selectedKey) return;
@@ -235,7 +254,7 @@ export function OrderForm() {
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 36 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.progressArea}><View style={styles.stepRow}>{steps.map((label, index) => <View key={label} style={styles.stepItem}><View style={[styles.stepDot, { backgroundColor: index <= step ? colors.primary : colors.surfaceElevated }]}><Text style={[styles.stepNumber, { color: index <= step ? colors.primaryForeground : colors.mutedForeground }]}>{index + 1}</Text></View><Text style={[styles.stepLabel, { color: index === step ? colors.foreground : colors.mutedForeground }]}>{label}</Text></View>)}</View><View style={[styles.progressTrack, { backgroundColor: colors.surfaceElevated }]}><View style={[styles.progressFill, { width: progress, backgroundColor: colors.primary }]} /></View><Text style={[styles.progressText, { color: colors.mutedForeground }]}>Шаг {step + 1} из {steps.length}</Text></View>
         <View style={styles.form}>
-          {step === 0 ? <><Text style={[styles.heading, { color: colors.foreground }]}>Выберите тип оснастки</Text><Text style={[styles.description, { color: colors.mutedForeground }]}>Покажем только поля, чертежи и фото, которые нужны для выбранного изделия.</Text>{productsQuery.isLoading ? <Text style={[styles.helper, { color: colors.mutedForeground }]}>Загружаем каталог...</Text> : null}{productsQuery.isError ? <Text style={[styles.errorBox, { color: colors.primary }]}>Не удалось загрузить каталог. Проверьте соединение и повторите попытку.</Text> : null}{products.map((product) => <Pressable key={product.key} accessibilityRole="button" onPress={() => { if (selectedKey !== product.key && Object.keys(values).length) Alert.alert('Сменить тип оснастки?', 'Несовместимые технические поля будут очищены.', [{ text: 'Отмена', style: 'cancel' }, { text: 'Продолжить', style: 'destructive', onPress: () => { setSelectedKey(product.key); setValues({}); setFiles({}); setAttachments([]); setErrors({}); } }]); else { setSelectedKey(product.key); setValues({}); setFiles({}); setAttachments([]); setErrors({}); } }} style={[styles.product, { backgroundColor: product.key === selectedKey ? colors.accentSoft : colors.surfaceGlass, borderColor: product.key === selectedKey ? colors.primary : colors.border }]}><Image source={getEquipmentImage(product.key)} style={styles.productImage} /><View style={styles.productCopy}><Text style={[styles.productName, { color: colors.foreground }]}>{product.name}</Text><Text style={[styles.productMeta, { color: colors.mutedForeground }]}>{product.fields.length} параметров</Text></View><Feather name={product.key === selectedKey ? 'check-circle' : 'chevron-right'} size={19} color={product.key === selectedKey ? colors.primary : colors.mutedForeground} /></Pressable>)}{errors.product ? <Text style={[styles.fieldError, { color: colors.primary }]}>{errors.product}</Text> : null}</> : null}
+          {step === 0 ? <><Text style={[styles.heading, { color: colors.foreground }]}>Выберите тип оснастки</Text><Text style={[styles.description, { color: colors.mutedForeground }]}>Покажем только поля, чертежи и фото, которые нужны для выбранного изделия.</Text>{productsQuery.isLoading ? <Text style={[styles.helper, { color: colors.mutedForeground }]}>Загрузка каталога…</Text> : null}{productsQuery.isError ? <View><Text style={[styles.errorBox, { color: colors.primary }]}>Не удалось загрузить данные каталога</Text><Pressable accessibilityRole="button" onPress={() => void productsQuery.refetch()}><Text style={[styles.retryText, { color: colors.primary }]}>Повторить</Text></Pressable></View> : null}{products.map((product) => <Pressable key={product.key} accessibilityRole="button" onPress={() => { if (selectedKey !== product.key && Object.keys(values).length) Alert.alert('Сменить тип оснастки?', 'Несовместимые технические поля будут очищены.', [{ text: 'Отмена', style: 'cancel' }, { text: 'Продолжить', style: 'destructive', onPress: () => { setSelectedKey(product.key); setValues({}); setFiles({}); setAttachments([]); setErrors({}); } }]); else { setSelectedKey(product.key); setValues({}); setFiles({}); setAttachments([]); setErrors({}); } }} style={[styles.product, { backgroundColor: product.key === selectedKey ? colors.accentSoft : colors.surfaceGlass, borderColor: product.key === selectedKey ? colors.primary : colors.border }]}><Image source={getEquipmentImage(product.key)} style={styles.productImage} /><View style={styles.productCopy}><Text style={[styles.productName, { color: colors.foreground }]}>{product.name}</Text><Text style={[styles.productMeta, { color: colors.mutedForeground }]}>{product.fields.length} параметров</Text></View><Feather name={product.key === selectedKey ? 'check-circle' : 'chevron-right'} size={19} color={product.key === selectedKey ? colors.primary : colors.mutedForeground} /></Pressable>)}{errors.product ? <Text style={[styles.fieldError, { color: colors.primary }]}>{errors.product}</Text> : null}</> : null}
           {step === 1 && selectedProduct ? <><Text style={[styles.heading, { color: colors.foreground }]}>{selectedProduct.name}</Text><Text style={[styles.description, { color: colors.mutedForeground }]}>Поля со знаком * обязательны. Для CP/DP выберите режим и укажите количество зубьев Z — раппорт рассчитается автоматически.</Text>{selectedProduct.fields.map((field) => <FieldInput key={field.key} field={field} value={values[field.key] ?? ''} file={files[field.key]} error={errors[field.key]} onChange={(value) => updateValue(field.key, value)} onPick={() => void pickFile(field)} colors={colors} />)}{values.tooth_module && values.repeat ? <GlassSection style={styles.result}><Feather name="sliders" size={18} color={colors.primary} /><Text style={[styles.resultTitle, { color: colors.foreground }]}>Рассчитанный раппорт</Text><Text style={[styles.resultValue, { color: colors.primary }]}>{values.repeat}</Text><Text style={[styles.resultHint, { color: colors.mutedForeground }]}>Формула текущего backend: Z × модуль ({values.tooth_module}). Проверьте результат по техническому заданию.</Text></GlassSection> : null}</> : null}
           {step === 2 ? <><Text style={[styles.heading, { color: colors.foreground }]}>Чертежи и фотографии</Text><Text style={[styles.description, { color: colors.mutedForeground }]}>Файлы конкретных полей уже отмечены в параметрах. Дополнительные фото можно добавить здесь.</Text><AttachmentSection attachments={attachments.filter((item) => !item.fieldKey)} onChange={(next) => setAttachments((current) => [...current.filter((item) => item.fieldKey), ...next])} /></> : null}
           {step === 3 ? <><Text style={[styles.heading, { color: colors.foreground }]}>Контактные данные</Text><Text style={[styles.description, { color: colors.mutedForeground }]}>Менеджер свяжется с вами для подтверждения технических деталей.</Text><Text style={[styles.label, { color: colors.foreground }]}>Компания / заказчик</Text><TextInput value={client} onChangeText={setClient} placeholder="Название компании" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surfaceGlass, borderColor: colors.border }]} /><Text style={[styles.label, { color: colors.foreground }]}>Контактное лицо *</Text><TextInput value={contact} onChangeText={(value) => { setContact(value); setErrors((current) => ({ ...current, contact: '' })); }} placeholder="Имя, телефон или e-mail" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surfaceGlass, borderColor: errors.contact ? colors.primary : colors.border }]} />{errors.contact ? <Text style={[styles.fieldError, { color: colors.primary }]}>{errors.contact}</Text> : null}<Text style={[styles.label, { color: colors.foreground }]}>Комментарий</Text><TextInput value={comment} onChangeText={setComment} multiline placeholder="Дополнительные требования" placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.textarea, { color: colors.foreground, backgroundColor: colors.surfaceGlass, borderColor: colors.border }]} /></> : null}
@@ -284,7 +303,8 @@ const styles = StyleSheet.create({
   heading: { fontSize: 23, lineHeight: 29, fontWeight: '800' },
   description: { fontSize: 13, lineHeight: 19, marginTop: 8, marginBottom: 20 },
   helper: { fontSize: 13, marginBottom: 12 },
-  errorBox: { fontSize: 13, marginBottom: 12 },
+  errorBox: { fontSize: 13, marginBottom: 4 },
+  retryText: { fontSize: 13, fontWeight: '800', marginBottom: 12 },
   product: { minHeight: 72, borderRadius: 18, borderWidth: 1, padding: 13, flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   productImage: { width: 42, height: 42, borderRadius: 13, marginRight: 10 },
   productCopy: { flex: 1 },
