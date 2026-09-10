@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { track } from '@/utils/analytics';
 
 export interface DraftAttachment {
   id: string;
@@ -168,6 +169,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(nextDrafts));
     draftsRef.current = nextDrafts;
     setDrafts(nextDrafts);
+    track('draft_saved', { step: input.step ?? 0 });
     return draft;
   }, []);
 

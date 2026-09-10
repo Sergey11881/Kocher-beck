@@ -74,6 +74,7 @@ export default function NewOrderScreen() {
       setAttachments(source.attachments ?? []);
       if (draft?.step === 1 || draft?.step === 2) setStep(draft.step);
       if (template && restored) setSelectedKey(restored.key);
+      if (draft) track('draft_restored', { step: draft.step ?? 0 });
       return;
     }
     if (calculatorData) {

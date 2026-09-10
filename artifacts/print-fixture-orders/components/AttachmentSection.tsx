@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import type { DraftAttachment } from '@/context/OrdersContext';
+import { track } from '@/utils/analytics';
 
 type Props = {
   attachments: DraftAttachment[];
@@ -21,10 +22,12 @@ export function AttachmentSection({ attachments, onChange }: Props) {
     try {
       const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true, multiple: true });
       if (result.canceled) return;
-      onChange([
+      const nextAttachments = [
         ...attachments,
         ...(Array.isArray(result.assets) ? result.assets : []).map((asset) => makeAttachment(asset.name, asset.uri, asset.mimeType, asset.size)),
-      ]);
+      ];
+      onChange(nextAttachments);
+      track('attachment_added', { count: nextAttachments.length });
     } catch (error: unknown) {
       console.error('Failed to pick attachment:', error);
       Alert.alert('Не удалось прикрепить файл', 'Проверьте доступ к файлам и попробуйте ещё раз.');
@@ -40,10 +43,12 @@ export function AttachmentSection({ attachments, onChange }: Props) {
       }
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, allowsMultipleSelection: true });
       if (result.canceled) return;
-      onChange([
+      const nextAttachments = [
         ...attachments,
         ...(Array.isArray(result.assets) ? result.assets : []).map((asset) => makeAttachment(asset.fileName ?? 'Фото оснастки', asset.uri, asset.mimeType, asset.fileSize)),
-      ]);
+      ];
+      onChange(nextAttachments);
+      track('attachment_added', { count: nextAttachments.length });
     } catch (error: unknown) {
       console.error('Failed to pick photo:', error);
       Alert.alert('Не удалось выбрать фото', 'Попробуйте ещё раз.');
@@ -72,7 +77,7 @@ export function AttachmentSection({ attachments, onChange }: Props) {
         <View key={attachment.id} style={styles.fileRow}>
           <Feather name="file" size={17} color={colors.primary} />
           <Text numberOfLines={1} style={[styles.fileName, { color: colors.foreground }]}>{attachment.name}</Text>
-          <Pressable onPress={() => onChange(attachments.filter((item) => item.id !== attachment.id))} hitSlop={8}>
+          <Pressable onPress={() => { onChange(attachments.filter((item) => item.id !== attachment.id)); track('attachment_removed'); }} hitSlop={8}>
             <Feather name="x-circle" size={18} color={colors.mutedForeground} />
           </Pressable>
         </View>

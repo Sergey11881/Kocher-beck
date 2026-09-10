@@ -63,6 +63,7 @@ export default function OrderDetailsScreen() {
       step: 1,
     });
     router.replace(`/new-order?draft=${draft.id}`);
+    track('order_repeated', { productType: order.product_type });
   };
 
   const saveAsTemplate = async () => {
