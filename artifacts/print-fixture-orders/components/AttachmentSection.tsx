@@ -23,7 +23,7 @@ export function AttachmentSection({ attachments, onChange }: Props) {
       if (result.canceled) return;
       onChange([
         ...attachments,
-        ...result.assets.map((asset) => makeAttachment(asset.name, asset.uri, asset.mimeType, asset.size)),
+        ...(Array.isArray(result.assets) ? result.assets : []).map((asset) => makeAttachment(asset.name, asset.uri, asset.mimeType, asset.size)),
       ]);
     } catch (error: unknown) {
       console.error('Failed to pick attachment:', error);
@@ -42,7 +42,7 @@ export function AttachmentSection({ attachments, onChange }: Props) {
       if (result.canceled) return;
       onChange([
         ...attachments,
-        ...result.assets.map((asset) => makeAttachment(asset.fileName ?? 'Фото оснастки', asset.uri, asset.mimeType, asset.fileSize)),
+        ...(Array.isArray(result.assets) ? result.assets : []).map((asset) => makeAttachment(asset.fileName ?? 'Фото оснастки', asset.uri, asset.mimeType, asset.fileSize)),
       ]);
     } catch (error: unknown) {
       console.error('Failed to pick photo:', error);

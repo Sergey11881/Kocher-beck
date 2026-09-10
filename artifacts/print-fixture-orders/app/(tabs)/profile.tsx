@@ -1,28 +1,16 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, spacing } from '../../constants/design';
-import { hasManagerContact, managerContact } from '../../config/manager';
 import { useAppSettings } from '../../hooks/useAppSettings';
 import { useDrafts } from '../../context/OrdersContext';
+import { ManagerContact } from '@/components/ManagerContact';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { drafts } = useDrafts();
   const { settings, isLoading, error, setNotificationsEnabled } = useAppSettings();
-
-  const contactManager = async () => {
-    if (managerContact.phone) {
-      await Linking.openURL(`tel:${managerContact.phone}`);
-      return;
-    }
-    if (managerContact.email) {
-      await Linking.openURL(`mailto:${managerContact.email}`);
-      return;
-    }
-    Alert.alert('Контакт пока не настроен', 'Контакт менеджера будет добавлен в конфигурацию приложения.');
-  };
 
   return (
     <View style={styles.screen}>
@@ -43,16 +31,7 @@ export default function ProfileScreen() {
           </View>
 
           <Text style={styles.section}>Менеджер</Text>
-          <View style={styles.setting}>
-            <View style={styles.settingIcon}><Feather name="message-circle" size={18} color={colors.accent} /></View>
-            <View style={styles.settingCopy}>
-              <Text style={styles.settingTitle}>{hasManagerContact ? managerContact.name || 'Менеджер Kocher+Beck' : 'Связь с менеджером'}</Text>
-              <Text style={styles.settingText}>{hasManagerContact ? 'Позвонить или написать менеджеру' : 'Контакт будет добавлен позже'}</Text>
-            </View>
-            <Pressable onPress={() => void contactManager()} style={styles.smallButton}>
-              <Text style={styles.smallButtonText}>{hasManagerContact ? 'Связаться' : 'Подробнее'}</Text>
-            </Pressable>
-          </View>
+          <ManagerContact />
 
           <Text style={styles.section}>Настройки</Text>
           <View style={styles.setting}>
@@ -75,6 +54,14 @@ export default function ProfileScreen() {
               <Text style={styles.settingTitle}>Черновики</Text>
               <Text style={styles.settingText}>{drafts.length ? `${drafts.length} сохранено на устройстве` : 'Сохранённых черновиков нет'}</Text>
             </View>
+            <Feather name="chevron-right" size={18} color={colors.textMuted} />
+          </Pressable>
+          <Pressable onPress={() => router.push('/templates')} style={styles.setting}>
+            <View style={styles.settingCopy}><Text style={styles.settingTitle}>Шаблоны</Text><Text style={styles.settingText}>Типовые заявки для быстрого старта</Text></View>
+            <Feather name="chevron-right" size={18} color={colors.textMuted} />
+          </Pressable>
+          <Pressable onPress={() => router.push('/equipment')} style={styles.setting}>
+            <View style={styles.settingCopy}><Text style={styles.settingTitle}>Типы оснастки</Text><Text style={styles.settingText}>Фото и краткие пояснения</Text></View>
             <Feather name="chevron-right" size={18} color={colors.textMuted} />
           </Pressable>
           <View style={styles.setting}>

@@ -10,6 +10,8 @@ import { GlassSection } from '@/components/GlassSection';
 import { OrderTimeline } from '@/components/OrderTimeline';
 import { useDrafts } from '@/context/OrdersContext';
 import { getOrderStatusLabel } from '@/utils/orderStatus';
+import { ManagerContact } from '@/components/ManagerContact';
+import { track } from '@/utils/analytics';
 
 export default function OrderDetailsScreen() {
   const colors = useColors();
@@ -17,7 +19,7 @@ export default function OrderDetailsScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const rawId = Array.isArray(params.id) ? params.id[0] : params.id;
   const orderId = Number(rawId);
-  const { saveDraft } = useDrafts();
+  const { saveDraft, saveTemplate } = useDrafts();
   const orderQuery = useGetOrder(orderId, { query: { queryKey: getGetOrderQueryKey(orderId), enabled: Number.isFinite(orderId) } });
   const order = orderQuery.data;
 
@@ -41,11 +43,13 @@ export default function OrderDetailsScreen() {
   }
 
   const date = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(order.created_at));
-  const dataRows = Object.entries(order.data).filter(([key, value]) => key !== '__file_fields' && value !== null && value !== undefined && value !== '');
+  const orderData = typeof order.data === 'object' && order.data !== null && !Array.isArray(order.data) ? order.data : {};
+  const orderFiles = Array.isArray(order.files) ? order.files.filter((file): file is string => typeof file === 'string') : [];
+  const dataRows = Object.entries(orderData).filter(([key, value]) => key !== '__file_fields' && value !== null && value !== undefined && value !== '');
   const displayStatus = getOrderStatusLabel(order.status);
   const repeatOrder = async () => {
     const repeatData = Object.fromEntries(
-      Object.entries(order.data)
+      Object.entries(orderData)
         .filter(([key, value]) => key !== '__file_fields' && key !== '__product_key' && value !== null && value !== undefined)
         .map(([key, value]) => [key, Array.isArray(value) ? value.join(', ') : String(value)]),
     );
@@ -55,10 +59,23 @@ export default function OrderDetailsScreen() {
       contact: order.contact,
       comment: order.comment,
       data: { ...repeatData, __product_key: order.product_type },
-      fileNames: order.files.map((file) => file.split('/').pop() ?? file),
+      fileNames: orderFiles.map((file) => file.split('/').pop() ?? file),
       step: 1,
     });
     router.replace(`/new-order?draft=${draft.id}`);
+  };
+
+  const saveAsTemplate = async () => {
+    await saveTemplate({
+      name: `${order.product_name} · шаблон`,
+      productType: order.product_name,
+      client: order.client,
+      contact: order.contact,
+      comment: order.comment,
+      data: Object.fromEntries(Object.entries(orderData).map(([key, value]) => [key, Array.isArray(value) ? value.join(', ') : String(value ?? '')])),
+      fileNames: orderFiles.map((file) => file.split('/').pop() ?? file),
+    });
+    track('template_created', { productType: order.product_type });
   };
 
   return (
@@ -84,6 +101,10 @@ export default function OrderDetailsScreen() {
           <Feather name="refresh-cw" size={15} color={colors.primary} />
           <Text style={[styles.repeatText, { color: colors.primary }]}>Повторить заказ</Text>
         </Pressable>
+        <Pressable onPress={() => void saveAsTemplate()} style={({ pressed }) => [styles.templateButton, { borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}>
+          <Feather name="bookmark" size={15} color={colors.primary} />
+          <Text style={[styles.repeatText, { color: colors.primary }]}>Сохранить как шаблон</Text>
+        </Pressable>
 
         <GlassSection style={styles.detailsCard}>
           <DetailRow label="Компания / заказчик" value={order.client} colors={colors} />
@@ -93,15 +114,16 @@ export default function OrderDetailsScreen() {
             <DetailRow key={label} label={label} value={Array.isArray(value) ? value.join(', ') : String(value)} colors={colors} />
           ))}
         </GlassSection>
+        <ManagerContact />
 
-        {order.files.length > 0 ? (
+        {orderFiles.length > 0 ? (
           <GlassSection style={styles.files}>
             <View style={styles.filesHeader}>
               <Feather name="paperclip" size={17} color={colors.secondaryForeground} />
-              <Text style={[styles.filesLabel, { color: colors.secondaryForeground }]}>Прикреплено файлов: {order.files.length}</Text>
+              <Text style={[styles.filesLabel, { color: colors.secondaryForeground }]}>Прикреплено файлов: {orderFiles.length}</Text>
             </View>
-            {order.files.map((file) => (
-              <Text key={file} numberOfLines={1} style={[styles.fileName, { color: colors.secondaryForeground }]}>{file.split('/').pop() ?? file}</Text>
+            {orderFiles.map((file, fileIndex) => (
+              <Text key={`${file}-${fileIndex}`} numberOfLines={1} style={[styles.fileName, { color: colors.secondaryForeground }]}>{file.split('/').pop() ?? file}</Text>
             ))}
             <Text style={[styles.filesHint, { color: colors.mutedForeground }]}>Файлы сохранены на сервере типографии вместе с заявкой.</Text>
           </GlassSection>
@@ -150,6 +172,7 @@ const styles = StyleSheet.create({
   productName: { fontSize: 14, fontFamily: 'Inter_600SemiBold', marginBottom: 6 },
   meta: { fontSize: 12, fontFamily: 'Inter_400Regular', marginBottom: 25 },
   repeatButton: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: 11, paddingHorizontal: 11, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 18 },
+  templateButton: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: 11, paddingHorizontal: 11, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 18 },
   repeatText: { fontSize: 12, fontFamily: 'Inter_700Bold' },
   detailsCard: { borderRadius: 18, paddingHorizontal: 16 },
   row: { minHeight: 51, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 18, borderBottomWidth: 1 },

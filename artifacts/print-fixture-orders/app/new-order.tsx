@@ -3,12 +3,15 @@ import { Feather } from '@expo/vector-icons';
 import { getGetProductsQueryKey, useGetProducts, type FieldDefinition, type ProductDefinition } from '@workspace/api-client-react';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassSection } from '@/components/GlassSection';
 import { AttachmentSection } from '@/components/AttachmentSection';
 import { useDrafts, type DraftAttachment } from '@/context/OrdersContext';
 import { useColors } from '@/hooks/useColors';
+import { getEquipmentImage } from '@/config/equipment';
+import { track } from '@/utils/analytics';
+import { Image } from 'react-native';
 
 type Step = 0 | 1 | 2;
 type PickedFile = { uri: string; name: string; mimeType?: string };
@@ -22,9 +25,11 @@ function productMatches(product: ProductDefinition, name: string) {
 export default function NewOrderScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ draft?: string }>();
+  const params = useLocalSearchParams<{ draft?: string; template?: string; calculator?: string }>();
   const draftId = Array.isArray(params.draft) ? params.draft[0] : params.draft;
-  const { isLoading: draftsLoading, saveDraft, getDraft } = useDrafts();
+  const templateId = Array.isArray(params.template) ? params.template[0] : params.template;
+  const calculatorParam = Array.isArray(params.calculator) ? params.calculator[0] : params.calculator;
+  const { isLoading: draftsLoading, saveDraft, getDraft, getTemplate } = useDrafts();
   const productsQuery = useGetProducts({ query: { queryKey: getGetProductsQueryKey(), staleTime: 300_000 } });
   const [step, setStep] = useState<Step>(0);
   const [selectedKey, setSelectedKey] = useState('');
@@ -41,26 +46,44 @@ export default function NewOrderScreen() {
   const products = Array.isArray(productsQuery.data) ? productsQuery.data : [];
   const selectedProduct = products.find((product) => product.key === selectedKey);
   const draft = draftId ? getDraft(draftId) : undefined;
+  const template = templateId ? getTemplate(templateId) : undefined;
+  const calculatorData = useMemo(() => {
+    if (!calculatorParam) return undefined;
+    try {
+      const parsed = JSON.parse(decodeURIComponent(calculatorParam)) as unknown;
+      if (typeof parsed !== 'object' || parsed === null || !('productKey' in parsed) || !('values' in parsed)) return undefined;
+      return parsed as { productKey: string; values: Record<string, string> };
+    } catch {
+      return undefined;
+    }
+  }, [calculatorParam]);
   const progress = `${((step + 1) / 3) * 100}%` as `${number}%`;
 
   useEffect(() => {
     if (hydratedRef.current || draftsLoading || !products.length) return;
     hydratedRef.current = true;
-    if (draft) {
-      const savedKey = draft.data.__product_key;
-      const restored = products.find((product) => product.key === savedKey || product.name === draft.productType);
+    const source = draft ?? template;
+    if (source) {
+      const savedKey = source.data.__product_key;
+      const restored = products.find((product) => product.key === savedKey || product.name === source.productType);
       if (restored) setSelectedKey(restored.key);
-      setValues(Object.fromEntries(Object.entries(draft.data).filter(([key]) => key !== '__product_key')));
-      setClient(draft.client);
-      setContact(draft.contact);
-      setComment(draft.comment);
-      setAttachments(draft.attachments ?? []);
-      if (draft.step === 1 || draft.step === 2) setStep(draft.step);
+      setValues(Object.fromEntries(Object.entries(source.data).filter(([key]) => key !== '__product_key')));
+      setClient(source.client);
+      setContact(source.contact);
+      setComment(source.comment);
+      setAttachments(source.attachments ?? []);
+      if (draft?.step === 1 || draft?.step === 2) setStep(draft.step);
+      if (template && restored) setSelectedKey(restored.key);
+      return;
+    }
+    if (calculatorData) {
+      setSelectedKey(calculatorData.productKey);
+      setValues(calculatorData.values);
       return;
     }
     const first = preferredNames.map((name) => products.find((product) => productMatches(product, name))).find(Boolean);
     if (first) setSelectedKey(first.key);
-  }, [draft, products]);
+  }, [calculatorData, draft, products, template]);
 
   useEffect(() => {
     if (!hydratedRef.current || !selectedProduct) return;
@@ -150,7 +173,10 @@ export default function NewOrderScreen() {
 
   const next = () => {
     if (!validateStep()) return;
-    if (step < 2) setStep((current) => (current + 1) as Step);
+    if (step < 2) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setStep((current) => (current + 1) as Step);
+    }
     else void saveAndClose();
   };
 
@@ -181,8 +207,12 @@ export default function NewOrderScreen() {
               <Text style={[styles.description, { color: colors.mutedForeground }]}>Выберите тип оснастки — дальше покажем только нужные технические поля.</Text>
               {productsQuery.isLoading ? <Text style={[styles.helper, { color: colors.mutedForeground }]}>Загружаем каталог...</Text> : null}
               {productsQuery.isError ? <Text style={[styles.errorBox, { color: colors.primary }]}>Не удалось загрузить каталог. Проверьте соединение.</Text> : null}
+              <Pressable onPress={() => router.push('/calculator')} style={[styles.utilityButton, { borderColor: colors.border, backgroundColor: colors.surfaceGlass }]}>
+                <Feather name="sliders" size={16} color={colors.primary} /><Text style={[styles.utilityText, { color: colors.foreground }]}>Открыть калькулятор цилиндра</Text>
+              </Pressable>
               {products.map((product) => (
-                <Pressable key={product.key} onPress={() => { setSelectedKey(product.key); setValues({}); setFiles({}); setErrors({}); }} style={({ pressed }) => [styles.product, { backgroundColor: product.key === selectedKey ? colors.accentSoft : colors.surfaceGlass, borderColor: product.key === selectedKey ? colors.primary : colors.border, opacity: pressed ? 0.8 : 1 }]}>
+                <Pressable key={product.key} onPress={() => { track('tooling_selected', { productType: product.key }); setSelectedKey(product.key); setValues({}); setFiles({}); setErrors({}); }} style={({ pressed }) => [styles.product, { backgroundColor: product.key === selectedKey ? colors.accentSoft : colors.surfaceGlass, borderColor: product.key === selectedKey ? colors.primary : colors.border, opacity: pressed ? 0.8 : 1 }]}>
+                  <Image source={getEquipmentImage(product.key)} style={styles.productImage} />
                   <View style={[styles.productIcon, { backgroundColor: product.key === selectedKey ? colors.primary : colors.surfaceElevated }]}><Feather name={product.key === selectedKey ? 'check' : 'box'} size={18} color={product.key === selectedKey ? colors.primaryForeground : colors.mutedForeground} /></View>
                   <View style={styles.productCopy}><Text style={[styles.productName, { color: colors.foreground }]}>{product.name}</Text><Text style={[styles.productMeta, { color: colors.mutedForeground }]}>{product.fields.length} параметров</Text></View>
                   <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
@@ -198,6 +228,7 @@ export default function NewOrderScreen() {
               {selectedProduct.fields.map((field) => (
                 <FieldInput key={field.key} field={field} value={values[field.key] ?? ''} file={files[field.key]} error={errors[field.key]} onChange={(value) => updateValue(field.key, value)} onPick={() => void pickFile(field)} colors={colors} />
               ))}
+              {selectedProduct.key === 'magnetic' && !values.repeat ? <GlassSection style={styles.tip}><Feather name="sliders" size={17} color={colors.primary} /><Text style={[styles.tipText, { color: colors.mutedForeground }]}>Не знаете repeat? Откройте калькулятор — он поможет подготовить раскладку этикеток.</Text><Pressable onPress={() => router.push('/calculator')}><Text style={[styles.tipLink, { color: colors.primary }]}>Открыть калькулятор</Text></Pressable></GlassSection> : null}
               <GlassSection style={styles.tip}><Feather name="info" size={17} color={colors.primary} /><Text style={[styles.tipText, { color: colors.mutedForeground }]}>Проверьте, что размеры указаны в правильных единицах, а repeat соответствует заданию.</Text></GlassSection>
             </>
           ) : null}
@@ -265,7 +296,10 @@ const styles = StyleSheet.create({
   description: { fontSize: 13, lineHeight: 19, marginTop: 8, marginBottom: 20 },
   helper: { fontSize: 13, marginBottom: 12 },
   errorBox: { fontSize: 13, marginBottom: 12 },
+  utilityButton: { minHeight: 44, borderWidth: 1, borderRadius: 13, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  utilityText: { fontSize: 12, fontWeight: '800' },
   product: { minHeight: 72, borderRadius: 18, borderWidth: 1, padding: 13, flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  productImage: { width: 42, height: 42, borderRadius: 13, marginRight: 10, backgroundColor: 'rgba(255,255,255,0.06)' },
   productIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   productCopy: { flex: 1 },
   productName: { fontSize: 14, fontWeight: '800' },
@@ -281,6 +315,7 @@ const styles = StyleSheet.create({
   fieldError: { fontSize: 11, fontWeight: '700', marginTop: 6 },
   tip: { flexDirection: 'row', gap: 10, padding: 14, marginTop: 2 },
   tipText: { flex: 1, fontSize: 12, lineHeight: 18 },
+  tipLink: { fontSize: 12, fontWeight: '800', marginTop: 6 },
   summary: { padding: 16, marginTop: 8 },
   summaryTitle: { fontSize: 14, fontWeight: '800', marginBottom: 8 },
   summaryText: { fontSize: 12, marginTop: 4 },

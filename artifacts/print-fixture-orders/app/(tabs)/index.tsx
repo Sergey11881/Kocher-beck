@@ -7,6 +7,8 @@ import { GlassCard } from '@/components/GlassCard';
 import { useDrafts } from '@/context/OrdersContext';
 import { useColors } from '@/hooks/useColors';
 import { getOrderStatusLabel } from '@/utils/orderStatus';
+import { track } from '@/utils/analytics';
+import { useEffect } from 'react';
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -21,6 +23,10 @@ export default function HomeScreen() {
   const orders = Array.isArray(ordersQuery.data)
     ? ordersQuery.data.filter((order) => Number.isFinite(order.id)).slice(0, 3)
     : [];
+
+  useEffect(() => {
+    track('home_viewed');
+  }, []);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -64,6 +70,10 @@ export default function HomeScreen() {
           <View style={styles.actions}>
             <QuickAction icon="file-text" title="Заявки" caption="История заказов" onPress={() => router.push('/orders')} colors={colors} />
             <QuickAction icon="edit-3" title="Черновики" caption={`${drafts.length} сохранено`} onPress={() => router.push('/drafts')} colors={colors} />
+          </View>
+          <View style={[styles.actions, { marginTop: 12 }]}>
+            <QuickAction icon="sliders" title="Калькулятор" caption="Раскладка этикеток" onPress={() => router.push('/calculator')} colors={colors} />
+            <QuickAction icon="bookmark" title="Шаблоны" caption="Типовые заявки" onPress={() => router.push('/templates')} colors={colors} />
           </View>
 
           <View style={[styles.sectionHeader, { marginTop: 28 }]}>
