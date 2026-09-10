@@ -6,14 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassCard } from '@/components/GlassCard';
 import { useDrafts } from '@/context/OrdersContext';
 import { useColors } from '@/hooks/useColors';
-
-function statusLabel(status?: string) {
-  if (!status) return 'Новая';
-  if (/готов|заверш/i.test(status)) return 'Готово';
-  if (/производ/i.test(status)) return 'Производство';
-  if (/согласован|работ/i.test(status)) return 'В работе';
-  return status;
-}
+import { getOrderStatusLabel } from '@/utils/orderStatus';
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -86,7 +79,7 @@ export default function HomeScreen() {
                 <GlassCard style={styles.orderCard}>
                   <View style={styles.orderTop}>
                     <Text style={[styles.orderNumber, { color: colors.foreground }]}>{order.order_number}</Text>
-                    <Text style={[styles.orderStatus, { color: colors.primary }]}>{statusLabel(order.status)}</Text>
+                    <Text style={[styles.orderStatus, { color: colors.primary }]}>{getOrderStatusLabel(order.status)}</Text>
                   </View>
                   <Text style={[styles.orderName, { color: colors.mutedForeground }]} numberOfLines={1}>{order.product_name}</Text>
                   <View style={styles.orderMeta}>
