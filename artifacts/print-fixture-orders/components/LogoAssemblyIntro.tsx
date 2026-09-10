@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { useColors } from '@/hooks/useColors';
 
 const GRID_SIZE = 6;
+const SAFETY_TIMEOUT = 5500;
 const TILE_COUNT = GRID_SIZE * GRID_SIZE;
 const LOGO_ASPECT_RATIO = 1024 / 299;
 const SLOGAN = "The future start`s now";
@@ -30,11 +31,27 @@ export function LogoAssemblyIntro({ onComplete }: { onComplete: () => void }) {
   const progresses = useRef(
     Array.from({ length: TILE_COUNT }, () => new Animated.Value(0)),
   ).current;
-  const finalLogoOpacity = useRef(new Animated.Value(0)).current;
+  const completionGuard = useRef(false);
+
+    const finalLogoOpacity = useRef(new Animated.Value(0)).current;
   const sloganOpacity = useRef(new Animated.Value(0)).current;
   const shineProgress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    let safetyCompletionTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const safelyComplete = () => {
+      if (completionGuard.current) return;
+      completionGuard.current = true;
+      if (safetyCompletionTimer) {
+        clearTimeout(safetyCompletionTimer);
+        safetyCompletionTimer = null;
+      }
+      onComplete();
+    };
+
+    safetyCompletionTimer = setTimeout(safelyComplete, SAFETY_TIMEOUT);
+
     let timeout: ReturnType<typeof setTimeout> | undefined;
     const driver = Platform.OS !== 'web';
     const tileAnimation = Animated.parallel(
@@ -49,8 +66,16 @@ export function LogoAssemblyIntro({ onComplete }: { onComplete: () => void }) {
       }),
     );
 
+    const completeIntro = () => {
+      if (timeout) clearTimeout(timeout);
+      timeout = setTimeout(safelyComplete, 200);
+    };
+
     tileAnimation.start(({ finished }) => {
-      if (!finished) return;
+      if (!finished) {
+        completeIntro();
+        return;
+      }
 
       Animated.sequence([
         Animated.timing(finalLogoOpacity, { toValue: 1, duration: 300, useNativeDriver: driver }),
@@ -61,7 +86,11 @@ export function LogoAssemblyIntro({ onComplete }: { onComplete: () => void }) {
         ]),
         Animated.delay(240),
       ]).start(({ finished: sequenceFinished }) => {
-        if (sequenceFinished) timeout = setTimeout(onComplete, 200);
+        if (sequenceFinished) {
+          completeIntro();
+        } else {
+          completeIntro();
+        }
       });
     });
 

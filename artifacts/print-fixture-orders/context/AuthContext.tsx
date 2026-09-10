@@ -30,22 +30,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
+    let readyTimeout: ReturnType<typeof setTimeout> | null = null;
+    let completed = false;
+
+    const finishAuthInit = (storedToken: string | null) => {
+      if (!active || completed) return;
+
+      completed = true;
+
+      if (readyTimeout) {
+        clearTimeout(readyTimeout);
+        readyTimeout = null;
+      }
+
+      updateToken(storedToken);
+      setIsReady(true);
+    };
+
+    // Never allow authentication initialization to leave the whole app blank.
+    readyTimeout = setTimeout(() => {
+      finishAuthInit(null);
+    }, 1500);
+
     SecureStore.getItemAsync(TOKEN_KEY)
       .then((storedToken) => {
-        if (active) updateToken(storedToken);
+        finishAuthInit(storedToken);
       })
       .catch(() => {
-        if (active) updateToken(null);
-      })
-      .finally(() => {
-        if (active) setIsReady(true);
+        finishAuthInit(null);
       });
+
     setAuthFailureHandler(() => {
       void SecureStore.deleteItemAsync(TOKEN_KEY);
       updateToken(null);
     });
+
     return () => {
       active = false;
+      if (readyTimeout) clearTimeout(readyTimeout);
       setAuthFailureHandler(null);
     };
   }, []);

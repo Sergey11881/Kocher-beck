@@ -1,72 +1,114 @@
-import { Feather } from '@expo/vector-icons';
-import { getApiErrorMessage, useGetOrders } from '@workspace/api-client-react';
+import React from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { router } from 'expo-router';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { OrderCard } from '@/components/OrderCard';
-import { GlassSurface } from '@/components/GlassSurface';
-import { BackgroundAtmosphere } from '@/components/BackgroundAtmosphere';
-import { BrandHeader } from '@/components/BrandHeader';
-import { useColors } from '@/hooks/useColors';
+import {
+  colors,
+  radius,
+  spacing,
+} from '../../constants/design';
 
 export default function OrdersScreen() {
-  const colors = useColors();
-  const insets = useSafeAreaInsets();
-  const ordersQuery = useGetOrders();
-  const orders = ordersQuery.data ?? [];
-
   return (
-    <BackgroundAtmosphere>
+    <View style={styles.screen}>
       <ScrollView
-        style={styles.screen}
-        contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }}
-        refreshControl={<RefreshControl refreshing={ordersQuery.isFetching} onRefresh={() => void ordersQuery.refetch()} tintColor={colors.primary} />}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
       >
-      <BrandHeader title="Заявки" action="plus" actionLabel="Создать заявку" onAction={() => router.push('/new-order')} />
+        <Text style={styles.eyebrow}>KOCHER+BECK</Text>
+        <Text style={styles.title}>Заявки</Text>
 
-      <Text style={[styles.count, { color: colors.mutedForeground }]}>
-        {ordersQuery.isError ? 'Сервер временно недоступен' : orders.length === 0 ? 'Пока нет заявок' : `${orders.length} ${orders.length === 1 ? 'заявка' : 'заявок'}`}
-      </Text>
+        <View style={styles.empty}>
+          <Text style={styles.icon}>▤</Text>
+          <Text style={styles.emptyTitle}>Заявок пока нет</Text>
+          <Text style={styles.emptyText}>
+            Все созданные и отправленные заказы будут отображаться здесь.
+          </Text>
 
-      <View style={styles.list}>
-        {ordersQuery.isError ? (
-          <GlassSurface style={styles.empty}>
-            <Feather name="wifi-off" size={28} color={colors.primary} />
-            <Text style={[styles.emptyTitle, { color: colors.cardForeground }]}>{getApiErrorMessage(ordersQuery.error, 'Не удалось получить заявки')}</Text>
-            <Pressable onPress={() => void ordersQuery.refetch()} style={[styles.emptyButton, { backgroundColor: colors.secondary }]}>
-              <Text style={[styles.emptyButtonText, { color: colors.secondaryForeground }]}>Повторить</Text>
-            </Pressable>
-          </GlassSurface>
-        ) : orders.length > 0 ? (
-          orders.map((order) => <OrderCard key={order.id} order={order} onPress={() => router.push(`/order/${order.id}`)} onRepeat={() => router.push(`/new-order?repeat=${order.id}`)} />)
-        ) : (
-          <GlassSurface style={styles.empty}>
-            <Feather name="inbox" size={28} color={colors.primary} />
-            <Text style={[styles.emptyTitle, { color: colors.cardForeground }]}>Заявки ещё не создавались</Text>
-            <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>Начните с заполнения параметров вашего заказа.</Text>
-            <Pressable onPress={() => router.push('/new-order')} style={({ pressed }) => [styles.emptyButton, { backgroundColor: colors.secondary, opacity: pressed ? 0.8 : 1 }]}>
-              <Text style={[styles.emptyButtonText, { color: colors.secondaryForeground }]}>Создать заявку</Text>
-            </Pressable>
-          </GlassSurface>
-        )}
-      </View>
+          <Pressable
+            onPress={() => router.push('/new-order')}
+            style={styles.button}
+          >
+            <Text style={styles.buttonText}>Новая заявка</Text>
+          </Pressable>
+        </View>
       </ScrollView>
-    </BackgroundAtmosphere>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  header: { marginHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  eyebrow: { fontSize: 10, letterSpacing: 1.4, fontFamily: 'Inter_700Bold', marginBottom: 6 },
-  title: { fontSize: 28, lineHeight: 34, fontFamily: 'Inter_700Bold' },
-  addButton: { width: 44, height: 44, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  count: { marginHorizontal: 20, marginTop: 7, fontSize: 13, fontFamily: 'Inter_400Regular' },
-  list: { marginHorizontal: 20, marginTop: 22 },
-  empty: { padding: 22, borderRadius: 22, alignItems: 'flex-start' },
-  emptyTitle: { fontSize: 16, fontFamily: 'Inter_600SemiBold', marginTop: 18, marginBottom: 6 },
-  emptyBody: { fontSize: 13, lineHeight: 19, fontFamily: 'Inter_400Regular', marginBottom: 18 },
-  emptyButton: { paddingHorizontal: 15, minHeight: 42, borderRadius: 13, justifyContent: 'center' },
-  emptyButtonText: { fontSize: 12, fontFamily: 'Inter_700Bold' },
+  screen: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: 58,
+    paddingBottom: 40,
+    flexGrow: 1,
+  },
+
+  eyebrow: {
+    color: colors.accent,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.8,
+  },
+
+  title: {
+    color: colors.text,
+    fontSize: 30,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+
+  empty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+
+  icon: {
+    color: colors.accent,
+    fontSize: 38,
+    marginBottom: 16,
+  },
+
+  emptyTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+
+  button: {
+    marginTop: 22,
+    minHeight: 50,
+    paddingHorizontal: 24,
+    borderRadius: radius.md,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  buttonText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '800',
+  },
 });

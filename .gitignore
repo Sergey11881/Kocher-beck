@@ -1,49 +1,72 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+# Dependencies
+node_modules/
+.pnpm-store/
 
-# compiled output
-dist
-tmp
-out-tsc
-*.tsbuildinfo
-.expo
-.expo-shared
+# Expo / React Native
+.expo/
+.expo-shared/
+dist/
+web-build/
 
-# dependencies
-node_modules
+# Environment / secrets
+.env
+.env.*
+!.env.example
 
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
+# Logs / temporary files
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
 
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+# Replit / local temporary data
+/tmp/
+*.tmp
+*.temp
 
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
+# Backups created during development
+.git-backup/
+**/.git-backup/
+**/.backup-*/
+**/*.backup
+**/*.backup-*
 
-# System Files
+# OS/editor
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
 
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
+# Local databases
+*.db-shm
+*.db-wal
 
-# Replit
-.cache/
-.local/
+# TypeScript build caches
+*.tsbuildinfo
+
+# Generated local artifacts
+/tmp/
+
+# All backup files
+**/*backup*
+**/*.bak
+**/*.old
+
+# Development backup files
+*.backup
+*.backup-*
+*.bak
+*.old
+*backup*
+
+# Backup directories
+.backup-*/
+**/.backup-*/
+.git-backup/
+**/.git-backup/
+
+# Generated TypeScript caches
+*.tsbuildinfo
+
+# Local runtime database
+artifacts/api-server/data/toolorder.db
