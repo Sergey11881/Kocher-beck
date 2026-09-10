@@ -13,7 +13,7 @@ export default function OrdersScreen() {
   const insets = useSafeAreaInsets();
   const query = useGetOrders({ query: { queryKey: getGetOrdersQueryKey(), retry: false } });
   const [search, setSearch] = useState('');
-  const orders = [...(query.data ?? [])]
+  const orders = (Array.isArray(query.data) ? query.data : [])
     .filter((order) => Number.isFinite(order.id))
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .filter((order) => `${order.order_number} ${order.product_name} ${order.status}`.toLowerCase().includes(search.trim().toLowerCase()));

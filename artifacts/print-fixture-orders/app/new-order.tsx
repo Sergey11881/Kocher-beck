@@ -38,7 +38,7 @@ export default function NewOrderScreen() {
   const draftRef = useRef(draftId);
   const hydratedRef = useRef(false);
 
-  const products = productsQuery.data ?? [];
+  const products = Array.isArray(productsQuery.data) ? productsQuery.data : [];
   const selectedProduct = products.find((product) => product.key === selectedKey);
   const draft = draftId ? getDraft(draftId) : undefined;
   const progress = `${((step + 1) / 3) * 100}%` as `${number}%`;
