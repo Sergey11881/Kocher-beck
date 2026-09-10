@@ -4,11 +4,11 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "dev": "EXPO_NO_DOCTOR=1 EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_REPL_ID=$REPL_ID pnpm exec expo start --clear --go --host lan --port ${PORT:-25034}",
+    "dev": "EXPO_NO_DOCTOR=1 EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_REPL_ID=$REPL_ID EXPO_PACKAGER_PROXY_URL=https://$REPLIT_EXPO_DEV_DOMAIN REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_EXPO_DEV_DOMAIN pnpm exec expo start --clear --go --localhost --port ${PORT:-25034}",
     "build": "node scripts/build.js",
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "tunnel": "EXPO_NO_DOCTOR=1 EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_REPL_ID=$REPL_ID pnpm exec expo start --clear --go --tunnel --port ${PORT:-25034}",
+    "tunnel": "EXPO_NO_DOCTOR=1 EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_REPL_ID=$REPL_ID EXPO_PACKAGER_PROXY_URL=https://$REPLIT_EXPO_DEV_DOMAIN REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_EXPO_DEV_DOMAIN pnpm exec expo start --clear --go --localhost --port ${PORT:-25034}",
     "replit:expo": "bash scripts/replit-expo-start.sh"
   },
   "devDependencies": {
