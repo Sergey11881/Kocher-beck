@@ -23,7 +23,7 @@ export default function NewOrderScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ draft?: string }>();
   const draftId = Array.isArray(params.draft) ? params.draft[0] : params.draft;
-  const { drafts, saveDraft, getDraft } = useDrafts();
+  const { isLoading: draftsLoading, saveDraft, getDraft } = useDrafts();
   const productsQuery = useGetProducts({ query: { queryKey: getGetProductsQueryKey(), staleTime: 300_000 } });
   const [step, setStep] = useState<Step>(0);
   const [selectedKey, setSelectedKey] = useState('');
@@ -42,7 +42,7 @@ export default function NewOrderScreen() {
   const progress = `${((step + 1) / 3) * 100}%` as `${number}%`;
 
   useEffect(() => {
-    if (hydratedRef.current || !products.length) return;
+    if (hydratedRef.current || draftsLoading || !products.length) return;
     hydratedRef.current = true;
     if (draft) {
       const savedKey = draft.data.__product_key;
@@ -52,6 +52,7 @@ export default function NewOrderScreen() {
       setClient(draft.client);
       setContact(draft.contact);
       setComment(draft.comment);
+      if (draft.step === 1 || draft.step === 2) setStep(draft.step);
       return;
     }
     const first = preferredNames.map((name) => products.find((product) => productMatches(product, name))).find(Boolean);
@@ -60,6 +61,11 @@ export default function NewOrderScreen() {
 
   useEffect(() => {
     if (!hydratedRef.current || !selectedProduct) return;
+    const hasDraftContent = Object.keys(values).length > 0
+      || Boolean(client.trim() || contact.trim() || comment.trim())
+      || Object.keys(files).length > 0
+      || step > 0;
+    if (!draftRef.current && !hasDraftContent) return;
     const timer = setTimeout(() => {
       void saveDraft(
         {
@@ -69,6 +75,7 @@ export default function NewOrderScreen() {
           comment,
           data: { ...values, __product_key: selectedProduct.key },
           fileNames: Object.values(files).map((file) => file.name),
+          step,
         },
         draftRef.current,
       ).then((saved) => {
@@ -124,6 +131,7 @@ export default function NewOrderScreen() {
         comment,
         data: { ...values, __product_key: selectedProduct.key },
         fileNames: Object.values(files).map((file) => file.name),
+        step,
       }, draftRef.current);
       draftRef.current = saved.id;
       Alert.alert('Черновик сохранён', 'Заявка доступна в разделе «Черновики».');
@@ -168,7 +176,7 @@ export default function NewOrderScreen() {
               {productsQuery.isLoading ? <Text style={[styles.helper, { color: colors.mutedForeground }]}>Загружаем каталог...</Text> : null}
               {productsQuery.isError ? <Text style={[styles.errorBox, { color: colors.primary }]}>Не удалось загрузить каталог. Проверьте соединение.</Text> : null}
               {products.map((product) => (
-                <Pressable key={product.key} onPress={() => { setSelectedKey(product.key); setErrors({}); }} style={({ pressed }) => [styles.product, { backgroundColor: product.key === selectedKey ? colors.accentSoft : colors.surfaceGlass, borderColor: product.key === selectedKey ? colors.primary : colors.border, opacity: pressed ? 0.8 : 1 }]}>
+                <Pressable key={product.key} onPress={() => { setSelectedKey(product.key); setValues({}); setFiles({}); setErrors({}); }} style={({ pressed }) => [styles.product, { backgroundColor: product.key === selectedKey ? colors.accentSoft : colors.surfaceGlass, borderColor: product.key === selectedKey ? colors.primary : colors.border, opacity: pressed ? 0.8 : 1 }]}>
                   <View style={[styles.productIcon, { backgroundColor: product.key === selectedKey ? colors.primary : colors.surfaceElevated }]}><Feather name={product.key === selectedKey ? 'check' : 'box'} size={18} color={product.key === selectedKey ? colors.primaryForeground : colors.mutedForeground} /></View>
                   <View style={styles.productCopy}><Text style={[styles.productName, { color: colors.foreground }]}>{product.name}</Text><Text style={[styles.productMeta, { color: colors.mutedForeground }]}>{product.fields.length} параметров</Text></View>
                   <Feather name="chevron-right" size={18} color={colors.mutedForeground} />

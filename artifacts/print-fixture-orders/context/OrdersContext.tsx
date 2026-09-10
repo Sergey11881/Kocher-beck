@@ -9,10 +9,13 @@ export interface LocalDraft {
   comment: string;
   data: Record<string, string>;
   fileNames: string[];
+  step?: number;
   updatedAt: string;
 }
 
-interface DraftInput extends Omit<LocalDraft, 'id' | 'updatedAt'> {}
+interface DraftInput extends Omit<LocalDraft, 'id' | 'updatedAt'> {
+  step?: number;
+}
 
 interface DraftsContextValue {
   drafts: LocalDraft[];
@@ -39,10 +42,19 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((stored) => {
         if (!active || !stored) return;
-        const parsed = JSON.parse(stored) as LocalDraft[];
+        const parsed = JSON.parse(stored) as unknown;
         if (Array.isArray(parsed)) {
-          draftsRef.current = parsed;
-          setDrafts(parsed);
+          const validDrafts = parsed.filter((draft): draft is LocalDraft => (
+            typeof draft === 'object'
+            && draft !== null
+            && typeof draft.id === 'string'
+            && typeof draft.productType === 'string'
+            && typeof draft.data === 'object'
+            && draft.data !== null
+            && !Array.isArray(draft.data)
+          ));
+          draftsRef.current = validDrafts;
+          setDrafts(validDrafts);
         }
       })
       .catch((error: unknown) => {
