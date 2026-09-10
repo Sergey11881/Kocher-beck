@@ -1,5 +1,6 @@
 import { useColorScheme } from 'react-native';
 import colors from '@/constants/colors';
+import { colors as designColors } from '@/constants/design';
 
 /**
  * Returns the design tokens for the current color scheme.
@@ -18,6 +19,10 @@ export function useColors() {
   const palette = scheme === 'dark' ? colors.dark : colors.light;
   return {
     ...palette,
+    surfaceGlass: designColors.surfaceGlass,
+    surfaceElevated: designColors.surfaceElevated,
+    accentSoft: designColors.accentSoft,
+    success: designColors.success,
     radius: colors.radius,
     spacing: colors.spacing,
     typography: colors.typography,

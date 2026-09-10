@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface LocalDraft {
   id: string;
@@ -17,7 +17,9 @@ interface DraftInput extends Omit<LocalDraft, 'id' | 'updatedAt'> {}
 interface DraftsContextValue {
   drafts: LocalDraft[];
   isLoading: boolean;
-  saveDraft: (draft: DraftInput) => Promise<LocalDraft>;
+  saveDraft: (draft: DraftInput, id?: string) => Promise<LocalDraft>;
+  deleteDraft: (id: string) => Promise<void>;
+  getDraft: (id: string) => LocalDraft | undefined;
 }
 
 const DraftsContext = createContext<DraftsContextValue | null>(null);
@@ -29,6 +31,7 @@ function makeId() {
 
 export function OrdersProvider({ children }: { children: ReactNode }) {
   const [drafts, setDrafts] = useState<LocalDraft[]>([]);
+  const draftsRef = useRef<LocalDraft[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -37,7 +40,10 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       .then((stored) => {
         if (!active || !stored) return;
         const parsed = JSON.parse(stored) as LocalDraft[];
-        if (Array.isArray(parsed)) setDrafts(parsed);
+        if (Array.isArray(parsed)) {
+          draftsRef.current = parsed;
+          setDrafts(parsed);
+        }
       })
       .catch((error: unknown) => {
         if (active) {
@@ -53,15 +59,34 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const saveDraft = async (input: DraftInput) => {
-    const draft: LocalDraft = { ...input, id: makeId(), updatedAt: new Date().toISOString() };
-    const nextDrafts = [draft, ...drafts];
+  const saveDraft = useCallback(async (input: DraftInput, id?: string) => {
+    const draft: LocalDraft = {
+      ...input,
+      id: id ?? makeId(),
+      updatedAt: new Date().toISOString(),
+    };
+    const nextDrafts = id
+      ? [draft, ...draftsRef.current.filter((item) => item.id !== id)]
+      : [draft, ...draftsRef.current];
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(nextDrafts));
+    draftsRef.current = nextDrafts;
     setDrafts(nextDrafts);
     return draft;
-  };
+  }, []);
 
-  const value = useMemo(() => ({ drafts, isLoading, saveDraft }), [drafts, isLoading]);
+  const deleteDraft = useCallback(async (id: string) => {
+    const nextDrafts = draftsRef.current.filter((draft) => draft.id !== id);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(nextDrafts));
+    draftsRef.current = nextDrafts;
+    setDrafts(nextDrafts);
+  }, []);
+
+  const getDraft = useCallback((id: string) => drafts.find((draft) => draft.id === id), [drafts]);
+
+  const value = useMemo(
+    () => ({ drafts, isLoading, saveDraft, deleteDraft, getDraft }),
+    [drafts, isLoading, saveDraft, deleteDraft, getDraft],
+  );
   return <DraftsContext.Provider value={value}>{children}</DraftsContext.Provider>;
 }
 

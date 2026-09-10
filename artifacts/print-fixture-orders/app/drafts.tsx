@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useDrafts } from '@/context/OrdersContext';
+import { Alert } from 'react-native';
 import {
   colors,
   radius,
@@ -15,7 +16,7 @@ import {
 } from '../constants/design';
 
 export default function DraftsScreen() {
-  const { drafts, isLoading } = useDrafts();
+  const { drafts, isLoading, deleteDraft } = useDrafts();
 
   return (
     <View style={styles.screen}>
@@ -58,14 +59,19 @@ export default function DraftsScreen() {
           <View style={styles.list}>
             {drafts.map((draft) => (
               <View key={draft.id} style={styles.draftCard}>
-                <Text style={styles.draftTitle}>{draft.productType}</Text>
-                <Text style={styles.draftText}>
-                  Изменён {new Date(draft.updatedAt).toLocaleDateString('ru-RU')}
-                </Text>
-                <Text style={styles.draftText}>
-                  Параметров: {Object.keys(draft.data).length}
-                </Text>
-              </View>
+              <Pressable onPress={() => router.push(`/new-order?draft=${draft.id}`)} style={styles.draftOpen}>
+                <View style={styles.draftCopy}>
+                  <Text style={styles.draftTitle}>{draft.productType}</Text>
+                  <Text style={styles.draftText}>
+                    Изменён {new Date(draft.updatedAt).toLocaleDateString('ru-RU')} · параметров: {Object.keys(draft.data).length}
+                  </Text>
+                </View>
+                <Text style={styles.openText}>Открыть</Text>
+              </Pressable>
+              <Pressable onPress={() => Alert.alert('Удалить черновик?', 'Это действие нельзя отменить.', [{ text: 'Отмена', style: 'cancel' }, { text: 'Удалить', style: 'destructive', onPress: () => void deleteDraft(draft.id) }])} style={styles.deleteButton}>
+                <Text style={styles.deleteText}>Удалить</Text>
+              </Pressable>
+            </View>
             ))}
             <Pressable
               onPress={() => router.replace('/new-order')}
@@ -211,4 +217,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 5,
   },
+  draftOpen: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  draftCopy: { flex: 1 },
+  openText: { color: colors.accent, fontSize: 11, fontWeight: '800' },
+  deleteButton: { alignSelf: 'flex-start', paddingTop: 10 },
+  deleteText: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
 });

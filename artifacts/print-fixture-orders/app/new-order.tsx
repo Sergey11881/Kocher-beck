@@ -1,469 +1,276 @@
-import React, { useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  Alert,
-} from 'react-native';
-import { router } from 'expo-router';
+import * as DocumentPicker from 'expo-document-picker';
+import { Feather } from '@expo/vector-icons';
+import { getGetProductsQueryKey, useGetProducts, type FieldDefinition, type ProductDefinition } from '@workspace/api-client-react';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GlassSection } from '@/components/GlassSection';
 import { useDrafts } from '@/context/OrdersContext';
-import {
-  colors,
-  radius,
-  spacing,
-  typography,
-} from '../constants/design';
+import { useColors } from '@/hooks/useColors';
 
-const TOOLING = [
-  {
-    id: 'cylinder',
-    title: 'Магнитный цилиндр',
-    description: 'Для высечки этикетки',
-  },
-  {
-    id: 'form',
-    title: 'Формный цилиндр',
-    description: 'Для флексографской печати',
-  },
-  {
-    id: 'kms',
-    title: 'KMS',
-    description: 'Магнитная система',
-  },
-  {
-    id: 'gapmaster',
-    title: 'GapMaster',
-    description: 'Система для высечки',
-  },
-  {
-    id: 'flat',
-    title: 'Плоское основание',
-    description: 'Flat magnetic base',
-  },
-];
+type Step = 0 | 1 | 2;
+type PickedFile = { uri: string; name: string; mimeType?: string };
+
+const preferredNames = ['Формные / печатные цилиндры', 'Магнитный цилиндр', 'KMS', 'GapMaster', 'Плоская магнитная база'];
+
+function productMatches(product: ProductDefinition, name: string) {
+  return product.name.toLowerCase().includes(name.toLowerCase()) || product.key.toLowerCase() === name.toLowerCase();
+}
 
 export default function NewOrderScreen() {
-  const [selected, setSelected] = useState('cylinder');
-  const [machine, setMachine] = useState('');
-  const [quantity, setQuantity] = useState('1');
-  const { saveDraft } = useDrafts();
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ draft?: string }>();
+  const draftId = Array.isArray(params.draft) ? params.draft[0] : params.draft;
+  const { drafts, saveDraft, getDraft } = useDrafts();
+  const productsQuery = useGetProducts({ query: { queryKey: getGetProductsQueryKey(), staleTime: 300_000 } });
+  const [step, setStep] = useState<Step>(0);
+  const [selectedKey, setSelectedKey] = useState('');
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [files, setFiles] = useState<Record<string, PickedFile>>({});
+  const [client, setClient] = useState('');
+  const [contact, setContact] = useState('');
+  const [comment, setComment] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const draftRef = useRef(draftId);
+  const hydratedRef = useRef(false);
 
-  const selectedTool = useMemo(
-    () => TOOLING.find((item) => item.id === selected),
-    [selected]
-  );
+  const products = productsQuery.data ?? [];
+  const selectedProduct = products.find((product) => product.key === selectedKey);
+  const draft = draftId ? getDraft(draftId) : undefined;
+  const progress = `${((step + 1) / 3) * 100}%` as `${number}%`;
 
-  async function saveCurrentDraft() {
-    const selectedTool = TOOLING.find((item) => item.id === selected);
-    if (!selectedTool) return;
+  useEffect(() => {
+    if (hydratedRef.current || !products.length) return;
+    hydratedRef.current = true;
+    if (draft) {
+      const savedKey = draft.data.__product_key;
+      const restored = products.find((product) => product.key === savedKey || product.name === draft.productType);
+      if (restored) setSelectedKey(restored.key);
+      setValues(Object.fromEntries(Object.entries(draft.data).filter(([key]) => key !== '__product_key')));
+      setClient(draft.client);
+      setContact(draft.contact);
+      setComment(draft.comment);
+      return;
+    }
+    const first = preferredNames.map((name) => products.find((product) => productMatches(product, name))).find(Boolean);
+    if (first) setSelectedKey(first.key);
+  }, [draft, products]);
 
-    try {
-      await saveDraft({
-        productType: selectedTool.title,
-        client: '',
-        contact: '',
-        comment: '',
-        data: { machine, quantity },
-        fileNames: [],
+  useEffect(() => {
+    if (!hydratedRef.current || !selectedProduct) return;
+    const timer = setTimeout(() => {
+      void saveDraft(
+        {
+          productType: selectedProduct.name,
+          client,
+          contact,
+          comment,
+          data: { ...values, __product_key: selectedProduct.key },
+          fileNames: Object.values(files).map((file) => file.name),
+        },
+        draftRef.current,
+      ).then((saved) => {
+        draftRef.current = saved.id;
+      }).catch((error: unknown) => {
+        console.error('Failed to autosave draft:', error);
       });
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [client, comment, contact, files, selectedProduct, saveDraft, values]);
+
+  const updateValue = (key: string, value: string) => {
+    setValues((current) => ({ ...current, [key]: value }));
+    setErrors((current) => ({ ...current, [key]: '' }));
+  };
+
+  const validateStep = () => {
+    const nextErrors: Record<string, string> = {};
+    if (step === 0 && !selectedProduct) nextErrors.product = 'Выберите тип оснастки.';
+    if (step === 1 && selectedProduct) {
+      selectedProduct.fields.forEach((field) => {
+        if (!field.required) return;
+        if (field.type === 'file' ? !files[field.key] : !values[field.key]?.trim()) {
+          nextErrors[field.key] = 'Заполните это поле.';
+        }
+      });
+    }
+    if (step === 2 && !contact.trim()) nextErrors.contact = 'Укажите контактное лицо.';
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const pickFile = async (field: FieldDefinition) => {
+    const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      setFiles((current) => ({ ...current, [field.key]: { uri: asset.uri, name: asset.name, mimeType: asset.mimeType } }));
+      setErrors((current) => ({ ...current, [field.key]: '' }));
+    }
+  };
+
+  const saveAndClose = async () => {
+    if (!selectedProduct) {
+      setErrors({ product: 'Выберите тип оснастки.' });
+      setStep(0);
+      return;
+    }
+    try {
+      const saved = await saveDraft({
+        productType: selectedProduct.name,
+        client,
+        contact,
+        comment,
+        data: { ...values, __product_key: selectedProduct.key },
+        fileNames: Object.values(files).map((file) => file.name),
+      }, draftRef.current);
+      draftRef.current = saved.id;
+      Alert.alert('Черновик сохранён', 'Заявка доступна в разделе «Черновики».');
       router.replace('/drafts');
-    } catch {
+    } catch (error) {
+      console.error('Failed to save draft:', error);
       Alert.alert('Не удалось сохранить', 'Проверьте свободное место и попробуйте ещё раз.');
     }
-  }
+  };
+
+  const next = () => {
+    if (!validateStep()) return;
+    if (step < 2) setStep((current) => (current + 1) as Step);
+    else void saveAndClose();
+  };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.top}>
-        <Pressable onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>‹</Text>
-        </Pressable>
-
-        <View style={styles.topTitle}>
-          <Text style={styles.caption}>SMART ORDER</Text>
-          <Text style={styles.title}>Новая заявка</Text>
-        </View>
-
-        <Pressable onPress={() => void saveCurrentDraft()} style={styles.saveButton}>
-          <Text style={styles.save}>Сохранить</Text>
-        </Pressable>
+    <KeyboardAvoidingView style={[styles.screen, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 8, borderBottomColor: colors.border }]}>
+        <Pressable onPress={() => router.back()} style={styles.iconButton} hitSlop={8}><Feather name="x" size={22} color={colors.foreground} /></Pressable>
+        <View style={styles.topCopy}><Text style={[styles.caption, { color: colors.primary }]}>SMART ORDER</Text><Text style={[styles.title, { color: colors.foreground }]}>Новая заявка</Text></View>
+        <Pressable onPress={() => void saveAndClose()} style={styles.saveButton}><Text style={[styles.saveText, { color: colors.primary }]}>Сохранить</Text></Pressable>
       </View>
-
-      <View style={styles.progress}>
-        <View style={styles.progressTrack}>
-          <View style={styles.progressActive} />
-        </View>
-        <Text style={styles.progressText}>Шаг 1 из 4</Text>
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.heading}>Что необходимо изготовить?</Text>
-
-        <Text style={styles.description}>
-          Выберите тип инструмента. На следующих шагах приложение подберёт
-          необходимые параметры.
-        </Text>
-
-        <View style={styles.list}>
-          {TOOLING.map((item) => {
-            const isSelected = selected === item.id;
-
-            return (
-              <Pressable
-                key={item.id}
-                onPress={() => setSelected(item.id)}
-                style={({ pressed }) => [
-                  styles.option,
-                  isSelected && styles.optionSelected,
-                  pressed && styles.optionPressed,
-                ]}
-              >
-                <View style={styles.radio}>
-                  {isSelected && <View style={styles.radioInner} />}
-                </View>
-
-                <View style={styles.optionBody}>
-                  <Text style={styles.optionTitle}>{item.title}</Text>
-                  <Text style={styles.optionDescription}>
-                    {item.description}
-                  </Text>
-                </View>
-
-                <Text style={styles.optionArrow}>›</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <Text style={styles.heading}>Основные параметры</Text>
-
-        <Text style={styles.label}>Машина / оборудование</Text>
-
-        <TextInput
-          value={machine}
-          onChangeText={setMachine}
-          placeholder="Например: Bobst, Mark Andy..."
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-        />
-
-        <Text style={styles.label}>Количество</Text>
-
-        <TextInput
-          value={quantity}
-          onChangeText={setQuantity}
-          keyboardType="number-pad"
-          placeholder="1"
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-        />
-
-        <View style={styles.hint}>
-          <View style={styles.hintIcon}>
-            <Text style={styles.hintIconText}>i</Text>
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 36 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <View style={styles.progressArea}>
+          <View style={styles.stepRow}>
+            {['Оснастка', 'Параметры', 'Контакты'].map((label, index) => (
+              <View key={label} style={styles.stepItem}>
+                <View style={[styles.stepDot, { backgroundColor: index <= step ? colors.primary : colors.surfaceElevated }]}><Text style={[styles.stepNumber, { color: index <= step ? colors.primaryForeground : colors.mutedForeground }]}>{index + 1}</Text></View>
+                <Text style={[styles.stepLabel, { color: index === step ? colors.foreground : colors.mutedForeground }]}>{label}</Text>
+              </View>
+            ))}
           </View>
-
-          <Text style={styles.hintText}>
-            Сейчас выбран: {selectedTool?.title}. Все введённые данные можно
-            будет изменить перед отправкой.
-          </Text>
+          <View style={[styles.progressTrack, { backgroundColor: colors.surfaceElevated }]}><View style={[styles.progressFill, { width: progress, backgroundColor: colors.primary }]} /></View>
+          <Text style={[styles.progressText, { color: colors.mutedForeground }]}>Шаг {step + 1} из 3</Text>
         </View>
-
-        <Pressable
-          onPress={() => void saveCurrentDraft()}
-          style={({ pressed }) => [
-            styles.draftButton,
-            pressed && styles.optionPressed,
-          ]}
-        >
-          <Text style={styles.draftButtonText}>Сохранить и продолжить позже</Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [
-            styles.continueButton,
-            pressed && styles.optionPressed,
-          ]}
-        >
-          <Text style={styles.continueText}>Продолжить</Text>
-          <Text style={styles.continueArrow}>›</Text>
-        </Pressable>
+        <View style={styles.form}>
+          {step === 0 ? (
+            <>
+              <Text style={[styles.heading, { color: colors.foreground }]}>Что нужно изготовить?</Text>
+              <Text style={[styles.description, { color: colors.mutedForeground }]}>Выберите тип оснастки — дальше покажем только нужные технические поля.</Text>
+              {productsQuery.isLoading ? <Text style={[styles.helper, { color: colors.mutedForeground }]}>Загружаем каталог...</Text> : null}
+              {productsQuery.isError ? <Text style={[styles.errorBox, { color: colors.primary }]}>Не удалось загрузить каталог. Проверьте соединение.</Text> : null}
+              {products.map((product) => (
+                <Pressable key={product.key} onPress={() => { setSelectedKey(product.key); setErrors({}); }} style={({ pressed }) => [styles.product, { backgroundColor: product.key === selectedKey ? colors.accentSoft : colors.surfaceGlass, borderColor: product.key === selectedKey ? colors.primary : colors.border, opacity: pressed ? 0.8 : 1 }]}>
+                  <View style={[styles.productIcon, { backgroundColor: product.key === selectedKey ? colors.primary : colors.surfaceElevated }]}><Feather name={product.key === selectedKey ? 'check' : 'box'} size={18} color={product.key === selectedKey ? colors.primaryForeground : colors.mutedForeground} /></View>
+                  <View style={styles.productCopy}><Text style={[styles.productName, { color: colors.foreground }]}>{product.name}</Text><Text style={[styles.productMeta, { color: colors.mutedForeground }]}>{product.fields.length} параметров</Text></View>
+                  <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+                </Pressable>
+              ))}
+              {errors.product ? <Text style={[styles.fieldError, { color: colors.primary }]}>{errors.product}</Text> : null}
+            </>
+          ) : null}
+          {step === 1 && selectedProduct ? (
+            <>
+              <Text style={[styles.heading, { color: colors.foreground }]}>{selectedProduct.name}</Text>
+              <Text style={[styles.description, { color: colors.mutedForeground }]}>Проверьте размеры, количество зубьев, repeat/pitch, толщину и единицы измерения.</Text>
+              {selectedProduct.fields.map((field) => (
+                <FieldInput key={field.key} field={field} value={values[field.key] ?? ''} file={files[field.key]} error={errors[field.key]} onChange={(value) => updateValue(field.key, value)} onPick={() => void pickFile(field)} colors={colors} />
+              ))}
+              <GlassSection style={styles.tip}><Feather name="info" size={17} color={colors.primary} /><Text style={[styles.tipText, { color: colors.mutedForeground }]}>Проверьте, что размеры указаны в правильных единицах, а repeat соответствует заданию.</Text></GlassSection>
+            </>
+          ) : null}
+          {step === 2 ? (
+            <>
+              <Text style={[styles.heading, { color: colors.foreground }]}>Контакты и проверка</Text>
+              <Text style={[styles.description, { color: colors.mutedForeground }]}>Оставьте контакт, чтобы менеджер мог уточнить детали заказа.</Text>
+              <Text style={[styles.label, { color: colors.foreground }]}>Компания / заказчик</Text>
+              <TextInput value={client} onChangeText={setClient} placeholder="Название компании" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surfaceGlass, borderColor: colors.border }]} />
+              <Text style={[styles.label, { color: colors.foreground }]}>Контактное лицо *</Text>
+              <TextInput value={contact} onChangeText={(value) => { setContact(value); setErrors((current) => ({ ...current, contact: '' })); }} placeholder="Имя и телефон или e-mail" placeholderTextColor={colors.mutedForeground} style={[styles.input, { color: colors.foreground, backgroundColor: colors.surfaceGlass, borderColor: errors.contact ? colors.primary : colors.border }]} />
+              {errors.contact ? <Text style={[styles.fieldError, { color: colors.primary }]}>{errors.contact}</Text> : null}
+              <Text style={[styles.label, { color: colors.foreground }]}>Комментарий</Text>
+              <TextInput value={comment} onChangeText={setComment} multiline placeholder="Дополнительные требования" placeholderTextColor={colors.mutedForeground} style={[styles.input, styles.textarea, { color: colors.foreground, backgroundColor: colors.surfaceGlass, borderColor: colors.border }]} />
+              <GlassSection style={styles.summary}><Text style={[styles.summaryTitle, { color: colors.foreground }]}>Проверьте перед сохранением</Text><Text style={[styles.summaryText, { color: colors.mutedForeground }]}>{selectedProduct?.name}</Text><Text style={[styles.summaryText, { color: colors.mutedForeground }]}>Заполнено полей: {Object.keys(values).length}</Text></GlassSection>
+            </>
+          ) : null}
+        </View>
       </ScrollView>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 10, backgroundColor: colors.background, borderTopColor: colors.border }]}>
+        {step > 0 ? <Pressable onPress={() => setStep((current) => (current - 1) as Step)} style={[styles.backButton, { borderColor: colors.border }]}><Feather name="arrow-left" size={17} color={colors.foreground} /></Pressable> : null}
+        <Pressable onPress={next} style={[styles.nextButton, { backgroundColor: colors.primary }]}><Text style={styles.nextText}>{step === 2 ? 'Сохранить черновик' : 'Продолжить'}</Text><Feather name={step === 2 ? 'check' : 'arrow-right'} size={17} color={colors.primaryForeground} /></Pressable>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
+function FieldInput({ field, value, file, error, onChange, onPick, colors }: { field: FieldDefinition; value: string; file?: PickedFile; error?: string; onChange: (value: string) => void; onPick: () => void; colors: ReturnType<typeof useColors> }) {
+  return (
+    <View style={styles.fieldWrap}>
+      <Text style={[styles.label, { color: colors.foreground }]}>{field.label}{field.required ? ' *' : ''}</Text>
+      {field.type === 'file' ? (
+        <Pressable onPress={onPick} style={[styles.input, styles.fileInput, { backgroundColor: colors.surfaceGlass, borderColor: error ? colors.primary : colors.border }]}><Feather name={file ? 'check-circle' : 'paperclip'} size={18} color={colors.primary} /><Text numberOfLines={1} style={[styles.fileText, { color: file ? colors.foreground : colors.mutedForeground }]}>{file?.name ?? 'Прикрепить файл'}</Text></Pressable>
+      ) : field.type === 'select' ? (
+        <View style={styles.options}>{(field.options ?? []).map((option) => <Pressable key={option} onPress={() => onChange(option)} style={[styles.option, { backgroundColor: value === option ? colors.primary : colors.surfaceGlass, borderColor: value === option ? colors.primary : colors.border }]}><Text style={{ color: value === option ? colors.primaryForeground : colors.foreground, fontWeight: '700' }}>{option}</Text></Pressable>)}</View>
+      ) : (
+        <TextInput value={value} onChangeText={onChange} editable={!field.readOnly} keyboardType={field.type === 'number' ? 'numeric' : 'default'} multiline={field.type === 'textarea'} placeholder={field.label} placeholderTextColor={colors.mutedForeground} style={[styles.input, field.type === 'textarea' && styles.textarea, { color: colors.foreground, backgroundColor: field.readOnly ? colors.surfaceElevated : colors.surfaceGlass, borderColor: error ? colors.primary : colors.border }]} />
+      )}
+      {error ? <Text style={[styles.fieldError, { color: colors.primary }]}>{error}</Text> : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-
-  top: {
-    paddingTop: 54,
-    paddingHorizontal: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  back: {
-    width: 42,
-    height: 42,
-    borderRadius: 15,
-    backgroundColor: colors.surfaceGlass,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-
-  backText: {
-    color: colors.text,
-    fontSize: 32,
-    fontWeight: '200',
-    lineHeight: 34,
-  },
-
-  topTitle: {
-    flex: 1,
-    marginLeft: 12,
-  },
-
-  caption: {
-    color: colors.accent,
-    ...typography.caption,
-  },
-
-  title: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-
-  saveButton: {
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-  },
-
-  save: {
-    color: colors.accent,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  progress: {
-    paddingHorizontal: spacing.lg,
-    marginTop: 20,
-    marginBottom: 4,
-  },
-
-  progressTrack: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.surfaceElevated,
-    overflow: 'hidden',
-  },
-
-  progressActive: {
-    width: '25%',
-    height: 4,
-    backgroundColor: colors.accent,
-  },
-
-  progressText: {
-    color: colors.textMuted,
-    fontSize: 10,
-    marginTop: 6,
-  },
-
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: 20,
-    paddingBottom: 40,
-  },
-
-  heading: {
-    color: colors.text,
-    ...typography.section,
-    marginTop: 8,
-  },
-
-  description: {
-    color: colors.textSecondary,
-    ...typography.body,
-    marginTop: 8,
-    marginBottom: 18,
-  },
-
-  list: {
-    gap: 10,
-    marginBottom: 28,
-  },
-
-  option: {
-    minHeight: 76,
-    borderRadius: radius.lg,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
-    backgroundColor: colors.surfaceGlass,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  optionSelected: {
-    backgroundColor: colors.accentSoft,
-    borderColor: 'rgba(227,6,19,0.45)',
-  },
-
-  optionPressed: {
-    opacity: 0.72,
-  },
-
-  radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.textMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.accent,
-  },
-
-  optionBody: {
-    flex: 1,
-  },
-
-  optionTitle: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
-  optionDescription: {
-    color: colors.textMuted,
-    fontSize: 11,
-    marginTop: 3,
-  },
-
-  optionArrow: {
-    color: colors.textMuted,
-    fontSize: 25,
-    fontWeight: '200',
-    marginLeft: 8,
-  },
-
-  label: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 18,
-    marginBottom: 7,
-  },
-
-  input: {
-    minHeight: 50,
-    borderRadius: 15,
-    paddingHorizontal: 15,
-    color: colors.text,
-    backgroundColor: colors.surfaceGlass,
-    borderWidth: 1,
-    borderColor: colors.border,
-    fontSize: 14,
-  },
-
-  hint: {
-    flexDirection: 'row',
-    marginTop: 18,
-    padding: 14,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(90,169,255,0.07)',
-    borderWidth: 1,
-    borderColor: 'rgba(90,169,255,0.12)',
-  },
-
-  hintIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(90,169,255,0.14)',
-    marginRight: 10,
-  },
-
-  hintIconText: {
-    color: colors.info,
-    fontWeight: '800',
-    fontSize: 12,
-  },
-
-  hintText: {
-    flex: 1,
-    color: colors.textSecondary,
-    fontSize: 11,
-    lineHeight: 16,
-  },
-
-  draftButton: {
-    minHeight: 50,
-    marginTop: 20,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  draftButtonText: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  continueButton: {
-    minHeight: 56,
-    marginTop: 10,
-    borderRadius: 17,
-    paddingHorizontal: 18,
-    backgroundColor: colors.accent,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  continueText: {
-    color: colors.white,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-
-  continueArrow: {
-    color: colors.white,
-    fontSize: 28,
-    fontWeight: '200',
-  },
+  screen: { flex: 1 },
+  topBar: { minHeight: 64, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1 },
+  iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  topCopy: { flex: 1, marginLeft: 8 },
+  caption: { fontSize: 10, fontWeight: '800', letterSpacing: 1.4 },
+  title: { fontSize: 18, fontWeight: '800', marginTop: 2 },
+  saveButton: { padding: 8 },
+  saveText: { fontSize: 13, fontWeight: '800' },
+  progressArea: { paddingHorizontal: 20, paddingTop: 18 },
+  stepRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  stepItem: { alignItems: 'center', gap: 6 },
+  stepDot: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  stepNumber: { fontSize: 12, fontWeight: '800' },
+  stepLabel: { fontSize: 10, fontWeight: '700' },
+  progressTrack: { height: 4, borderRadius: 2, marginTop: 14, overflow: 'hidden' },
+  progressFill: { height: 4, borderRadius: 2 },
+  progressText: { fontSize: 10, marginTop: 6 },
+  form: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 120 },
+  heading: { fontSize: 23, lineHeight: 29, fontWeight: '800' },
+  description: { fontSize: 13, lineHeight: 19, marginTop: 8, marginBottom: 20 },
+  helper: { fontSize: 13, marginBottom: 12 },
+  errorBox: { fontSize: 13, marginBottom: 12 },
+  product: { minHeight: 72, borderRadius: 18, borderWidth: 1, padding: 13, flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  productIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  productCopy: { flex: 1 },
+  productName: { fontSize: 14, fontWeight: '800' },
+  productMeta: { fontSize: 11, marginTop: 4 },
+  fieldWrap: { marginBottom: 16 },
+  label: { fontSize: 12, fontWeight: '800', marginBottom: 7 },
+  input: { minHeight: 50, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, fontSize: 14 },
+  textarea: { minHeight: 100, paddingTop: 14, textAlignVertical: 'top' },
+  fileInput: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13 },
+  fileText: { flex: 1, fontSize: 13 },
+  options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  option: { minHeight: 44, paddingHorizontal: 14, borderRadius: 13, borderWidth: 1, justifyContent: 'center' },
+  fieldError: { fontSize: 11, fontWeight: '700', marginTop: 6 },
+  tip: { flexDirection: 'row', gap: 10, padding: 14, marginTop: 2 },
+  tipText: { flex: 1, fontSize: 12, lineHeight: 18 },
+  summary: { padding: 16, marginTop: 8 },
+  summaryTitle: { fontSize: 14, fontWeight: '800', marginBottom: 8 },
+  summaryText: { fontSize: 12, marginTop: 4 },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 10, flexDirection: 'row', gap: 10, borderTopWidth: 1 },
+  backButton: { width: 52, height: 52, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  nextButton: { flex: 1, minHeight: 52, borderRadius: 16, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  nextText: { color: '#fff', fontSize: 14, fontWeight: '800' },
 });
