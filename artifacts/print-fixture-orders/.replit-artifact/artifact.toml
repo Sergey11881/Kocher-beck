@@ -13,7 +13,7 @@ paths = [ "/print-fixture-orders/" ]
 localPort = 25034
 
 [services.development]
-run = "pnpm --filter ./artifacts/print-fixture-orders run dev"
+run = "pnpm -C artifacts/print-fixture-orders run dev"
 
 [services.production]
 build = [ "pnpm", "--filter", "./artifacts/print-fixture-orders", "run", "build" ]
