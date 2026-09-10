@@ -16,7 +16,7 @@ import { colors as designColors } from '@/constants/design';
  */
 export function useColors() {
   const scheme = useColorScheme();
-  const palette = scheme === 'dark' ? colors.dark : colors.light;
+  const palette = colors.light;
   return {
     ...palette,
     surfaceGlass: designColors.surfaceGlass,

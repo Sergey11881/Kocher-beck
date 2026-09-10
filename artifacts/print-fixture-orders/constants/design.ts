@@ -1,21 +1,21 @@
 import { Platform } from 'react-native';
 
 export const colors = {
-  background: '#08090C',
-  surface: '#111318',
-  surfaceElevated: '#171A21',
-  surfaceGlass: 'rgba(255,255,255,0.07)',
-  surfaceGlassStrong: 'rgba(255,255,255,0.11)',
+  background: '#FFFFFF',
+  surface: '#FFFFFF',
+  surfaceElevated: '#F4F5F7',
+  surfaceGlass: 'rgba(255,255,255,0.88)',
+  surfaceGlassStrong: 'rgba(255,255,255,0.96)',
 
-  text: '#FFFFFF',
-  textSecondary: '#A7ABB5',
-  textMuted: '#6F7480',
+  text: '#15171B',
+  textSecondary: '#4F5661',
+  textMuted: '#68717C',
 
-  border: 'rgba(255,255,255,0.10)',
-  borderStrong: 'rgba(255,255,255,0.16)',
+  border: 'rgba(21,23,27,0.12)',
+  borderStrong: 'rgba(21,23,27,0.18)',
 
   accent: '#E30613',
-  accentSoft: 'rgba(227,6,19,0.16)',
+  accentSoft: 'rgba(227,6,19,0.10)',
 
   success: '#35C759',
   warning: '#FFB340',

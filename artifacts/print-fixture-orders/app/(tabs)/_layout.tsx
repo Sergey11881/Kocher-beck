@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Text, View } from 'react-native';
+import { colors } from '@/constants/design';
 
 function TabIcon({
   symbol,
@@ -18,13 +19,13 @@ function TabIcon({
         justifyContent: 'center',
         borderRadius: 15,
         backgroundColor: focused
-          ? 'rgba(227,6,19,0.16)'
+          ? colors.accentSoft
           : 'transparent',
       }}
     >
       <Text
         style={{
-          color: focused ? '#FFFFFF' : '#777C87',
+          color: focused ? colors.accent : colors.textMuted,
           fontSize: 18,
           fontWeight: '700',
         }}
@@ -40,11 +41,11 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#FFFFFF',
-        tabBarInactiveTintColor: '#777C87',
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
-          backgroundColor: '#111318',
-          borderTopColor: 'rgba(255,255,255,0.08)',
+          backgroundColor: colors.background,
+          borderTopColor: colors.border,
           height: 78,
           paddingTop: 8,
           paddingBottom: 12,

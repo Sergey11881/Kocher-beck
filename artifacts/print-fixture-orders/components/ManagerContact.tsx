@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import { managerContact, hasManagerContact } from '@/config/manager';
+import { managerContacts } from '@/config/manager';
 import { useColors } from '@/hooks/useColors';
 import { GlassSection } from '@/components/GlassSection';
 import { track } from '@/utils/analytics';
@@ -23,47 +23,31 @@ export function ManagerContact() {
     }
   };
 
-  return (
-    <GlassSection style={styles.card}>
+  return <View>{managerContacts.map((manager) => (
+    <GlassSection key={manager.phone} style={styles.card}>
       <View style={styles.header}>
-        <View style={[styles.icon, { backgroundColor: colors.accentSoft }]}>
-          <Feather name="message-circle" size={18} color={colors.primary} />
-        </View>
+        <View style={[styles.icon, { backgroundColor: colors.accentSoft }]}><Feather name="user" size={18} color={colors.primary} /></View>
         <View style={styles.copy}>
-          <Text style={[styles.title, { color: colors.foreground }]}>{hasManagerContact ? managerContact.name || 'Менеджер Kocher+Beck' : 'Связь с менеджером'}</Text>
-          <Text style={[styles.description, { color: colors.mutedForeground }]}>
-            {hasManagerContact ? 'Поможем уточнить технические детали заказа.' : 'Контакты будут доступны после настройки конфигурации.'}
-          </Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>{manager.name}</Text>
+          <Text style={[styles.description, { color: colors.mutedForeground }]}>{manager.role}</Text>
+          <Text style={[styles.phone, { color: colors.foreground }]}>{manager.phone}</Text>
         </View>
       </View>
-      {managerContact.phone ? (
-        <Pressable accessibilityRole="button" onPress={() => void open(`tel:${managerContact.phone}`, 'телефон')} style={[styles.action, { borderColor: colors.border }]}>
-          <Feather name="phone" size={16} color={colors.primary} /><Text style={[styles.actionText, { color: colors.foreground }]}>Позвонить</Text>
-        </Pressable>
-      ) : null}
-      {managerContact.email ? (
-        <Pressable accessibilityRole="button" onPress={() => void open(`mailto:${managerContact.email}`, 'e-mail')} style={[styles.action, { borderColor: colors.border }]}>
-          <Feather name="mail" size={16} color={colors.primary} /><Text style={[styles.actionText, { color: colors.foreground }]}>Написать на e-mail</Text>
-        </Pressable>
-      ) : null}
-      {managerContact.maxUrl ? (
-        <Pressable accessibilityRole="button" onPress={() => void open(managerContact.maxUrl, 'мессенджер')} style={[styles.action, { borderColor: colors.border }]}>
-          <Feather name="send" size={16} color={colors.primary} /><Text style={[styles.actionText, { color: colors.foreground }]}>Открыть мессенджер</Text>
-        </Pressable>
-      ) : null}
-      {!hasManagerContact ? <Text style={[styles.fallback, { color: colors.mutedForeground }]}>Попросите администратора добавить телефон, e-mail или ссылку на мессенджер.</Text> : null}
+      <Pressable accessibilityRole="button" accessibilityLabel={`Позвонить: ${manager.name}`} onPress={() => void open(`tel:${manager.phone.replace(/[^\d+]/g, '')}`, 'телефон')} style={[styles.action, { borderColor: colors.border }]}>
+        <Feather name="phone" size={16} color={colors.primary} /><Text style={[styles.actionText, { color: colors.foreground }]}>Позвонить</Text>
+      </Pressable>
     </GlassSection>
-  );
+  ))}</View>;
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 18, padding: 16, marginTop: 14 },
+  card: { borderRadius: 18, padding: 16, marginTop: 10 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   icon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1 },
   title: { fontSize: 15, fontWeight: '800' },
   description: { fontSize: 12, lineHeight: 18, marginTop: 4 },
+  phone: { fontSize: 13, fontWeight: '700', marginTop: 6 },
   action: { minHeight: 42, borderWidth: 1, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, marginTop: 10 },
   actionText: { fontSize: 12, fontWeight: '800' },
-  fallback: { fontSize: 12, lineHeight: 18, marginTop: 12 },
 });

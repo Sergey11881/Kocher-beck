@@ -4,11 +4,13 @@ import hashlib
 import hmac
 import os
 import re
+import smtplib
 import sqlite3
 import time
 import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timezone
+from email.message import EmailMessage
 from pathlib import Path
 
 from flask import Flask, jsonify, request, send_from_directory
@@ -362,6 +364,68 @@ def calculated_repeat(product_type, data):
     data["repeat"] = f"{repeat:.5f}".rstrip("0").rstrip(".") + " мм"
 
 
+def email_value(value):
+    if value is None:
+        return ""
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False)
+    return str(value)
+
+
+def send_order_email(order_number, product, product_type, client, contact, comment, data, uploaded_files, created_at):
+    host = os.environ.get("SMTP_HOST", "").strip()
+    if not host:
+        raise RuntimeError("SMTP_HOST is not configured")
+    port = int(os.environ.get("SMTP_PORT", "587"))
+    sender = os.environ.get("SMTP_FROM", "").strip()
+    recipient = "spavlov@kocher-beck.ru"
+    if not sender or not recipient:
+        raise RuntimeError("SMTP_FROM or ORDER_EMAIL_TO is not configured")
+
+    message = EmailMessage()
+    message["Subject"] = f"Новая заявка Kocher+Beck Smart Order — {product['name']}"
+    message["From"] = sender
+    message["To"] = recipient
+    rows = [
+        "Новая заявка",
+        "",
+        "Основная информация",
+        f"Номер: {order_number}",
+        f"Дата/время: {created_at}",
+        f"Тип оснастки: {product['name']}",
+        "",
+        "Контакты",
+        f"Компания: {client}",
+        f"Контактное лицо: {contact}",
+        "",
+        "Технические параметры и расчёты",
+    ]
+    rows.extend(f"{key}: {email_value(value)}" for key, value in data.items() if key != "__file_fields")
+    rows.extend(["", "Комментарий", comment, "", "Вложения"])
+    rows.extend(Path(path).name for path in uploaded_files)
+    message.set_content("\n".join(rows))
+
+    for path in uploaded_files:
+        file_path = UPLOAD_DIR / Path(path).name
+        if not file_path.is_file():
+            continue
+        message.add_attachment(
+            file_path.read_bytes(),
+            maintype="application",
+            subtype="octet-stream",
+            filename=file_path.name,
+        )
+
+    username = os.environ.get("SMTP_USERNAME", "").strip()
+    password = os.environ.get("SMTP_PASSWORD", "")
+    with smtplib.SMTP(host, port, timeout=20) as smtp:
+        if os.environ.get("SMTP_STARTTLS", "1").lower() not in {"0", "false", "no"}:
+            smtp.starttls()
+        if username:
+            smtp.login(username, password)
+        smtp.send_message(message)
+
+
 @app.get("/api/healthz")
 def healthz():
     return jsonify({"status": "ok"})
@@ -454,6 +518,26 @@ def create_order():
 
     now = datetime.now(timezone.utc).isoformat()
     order_number = f"TP-{datetime.now(timezone.utc):%Y%m%d}-{uuid.uuid4().hex[:6].upper()}"
+    try:
+        send_order_email(
+            order_number,
+            product,
+            product_type,
+            request.form.get("client", "").strip(),
+            request.form.get("contact", "").strip(),
+            request.form.get("comment", "").strip(),
+            data,
+            saved_files,
+            now,
+        )
+    except (OSError, smtplib.SMTPException, ValueError, RuntimeError) as exc:
+        for path in saved_files:
+            try:
+                (UPLOAD_DIR / Path(path).name).unlink(missing_ok=True)
+            except OSError:
+                pass
+        return error(f"Не удалось отправить заявку по e-mail: {type(exc).__name__}", 503)
+
     connection = get_db()
     cursor = connection.execute(
         """

@@ -226,10 +226,10 @@ export function OrderForm() {
       });
       await queryClient.invalidateQueries({ queryKey: getGetOrdersQueryKey() });
       track('order_submitted', { productType: selectedProduct.key });
-      router.replace(`/order/${order.id}`);
+      Alert.alert('Заявка успешно отправлена', 'Менеджер получил заявку и свяжется с вами.', [{ text: 'Открыть детали', onPress: () => router.replace(`/order/${order.id}`) }]);
     } catch (error: unknown) {
       console.error('Failed to submit order:', error);
-      Alert.alert('Не удалось отправить заявку', 'Проверьте соединение с сервером и попробуйте ещё раз.');
+      Alert.alert('Не удалось отправить заявку', 'Данные сохранены в текущей форме. Проверьте соединение и повторите отправку.', [{ text: 'Отмена', style: 'cancel' }, { text: 'Повторить', onPress: () => void submit() }]);
     }
   };
 
@@ -261,7 +261,7 @@ export function OrderForm() {
           {step === 4 && selectedProduct ? <Review product={selectedProduct} values={values} files={files} attachments={attachments} client={client} contact={contact} comment={comment} colors={colors} /> : null}
         </View>
       </ScrollView>
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 10, backgroundColor: colors.background, borderTopColor: colors.border }]}>{step > 0 ? <Pressable accessibilityRole="button" onPress={() => setStep((current) => (current - 1) as Step)} style={styles.backButton}><Feather name="arrow-left" size={17} color={colors.foreground} /></Pressable> : <View />}{step === 4 ? <Pressable accessibilityRole="button" onPress={() => void submit()} disabled={createOrder.isPending} style={[styles.nextButton, { backgroundColor: colors.primary, opacity: createOrder.isPending ? 0.6 : 1 }]}><Text style={styles.nextText}>{createOrder.isPending ? 'Отправляем...' : 'Отправить заявку'}</Text><Feather name="send" size={17} color={colors.primaryForeground} /></Pressable> : <Pressable accessibilityRole="button" onPress={next} style={[styles.nextButton, { backgroundColor: colors.primary }]}><Text style={styles.nextText}>Продолжить</Text><Feather name="arrow-right" size={17} color={colors.primaryForeground} /></Pressable>}</View>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 10, backgroundColor: colors.background, borderTopColor: colors.border }]}>{step > 0 ? <Pressable accessibilityRole="button" onPress={() => setStep((current) => (current - 1) as Step)} style={styles.backButton}><Feather name="arrow-left" size={17} color={colors.foreground} /></Pressable> : <View />}{step === 4 ? <Pressable accessibilityRole="button" onPress={() => void submit()} disabled={createOrder.isPending} style={[styles.nextButton, { backgroundColor: colors.primary, opacity: createOrder.isPending ? 0.6 : 1 }]}><Text style={styles.nextText}>{createOrder.isPending ? 'Отправляем...' : 'Отправить заказ'}</Text><Feather name="send" size={17} color={colors.primaryForeground} /></Pressable> : <Pressable accessibilityRole="button" onPress={next} style={[styles.nextButton, { backgroundColor: colors.primary }]}><Text style={styles.nextText}>Продолжить</Text><Feather name="arrow-right" size={17} color={colors.primaryForeground} /></Pressable>}</View>
     </KeyboardAvoidingView>
   );
 }
