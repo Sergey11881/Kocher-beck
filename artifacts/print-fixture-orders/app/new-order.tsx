@@ -8,8 +8,10 @@ import {
   Text,
   TextInput,
   View,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useDrafts } from '@/context/OrdersContext';
 import {
   colors,
   radius,
@@ -49,14 +51,30 @@ export default function NewOrderScreen() {
   const [selected, setSelected] = useState('cylinder');
   const [machine, setMachine] = useState('');
   const [quantity, setQuantity] = useState('1');
+  const { saveDraft } = useDrafts();
 
   const selectedTool = useMemo(
     () => TOOLING.find((item) => item.id === selected),
     [selected]
   );
 
-  function saveDraft() {
-    router.back();
+  async function saveCurrentDraft() {
+    const selectedTool = TOOLING.find((item) => item.id === selected);
+    if (!selectedTool) return;
+
+    try {
+      await saveDraft({
+        productType: selectedTool.title,
+        client: '',
+        contact: '',
+        comment: '',
+        data: { machine, quantity },
+        fileNames: [],
+      });
+      router.replace('/drafts');
+    } catch {
+      Alert.alert('Не удалось сохранить', 'Проверьте свободное место и попробуйте ещё раз.');
+    }
   }
 
   return (
@@ -74,7 +92,7 @@ export default function NewOrderScreen() {
           <Text style={styles.title}>Новая заявка</Text>
         </View>
 
-        <Pressable onPress={saveDraft} style={styles.saveButton}>
+        <Pressable onPress={() => void saveCurrentDraft()} style={styles.saveButton}>
           <Text style={styles.save}>Сохранить</Text>
         </Pressable>
       </View>
@@ -164,7 +182,7 @@ export default function NewOrderScreen() {
         </View>
 
         <Pressable
-          onPress={() => router.push('/drafts')}
+          onPress={() => void saveCurrentDraft()}
           style={({ pressed }) => [
             styles.draftButton,
             pressed && styles.optionPressed,

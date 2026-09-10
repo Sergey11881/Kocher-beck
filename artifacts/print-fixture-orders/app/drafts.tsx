@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useDrafts } from '@/context/OrdersContext';
 import {
   colors,
   radius,
@@ -14,6 +15,8 @@ import {
 } from '../constants/design';
 
 export default function DraftsScreen() {
+  const { drafts, isLoading } = useDrafts();
+
   return (
     <View style={styles.screen}>
       <ScrollView
@@ -31,27 +34,47 @@ export default function DraftsScreen() {
           </View>
         </View>
 
-        <View style={styles.empty}>
-          <View style={styles.icon}>
-            <Text style={styles.iconText}>✎</Text>
+        {isLoading ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>Загружаем черновики...</Text>
           </View>
-
-          <Text style={styles.emptyTitle}>Черновиков пока нет</Text>
-
-          <Text style={styles.emptyText}>
-            Незавершённые заявки будут автоматически сохраняться здесь.
-          </Text>
-
-          <Pressable
-            onPress={() => router.replace('/new-order')}
-            style={({ pressed }) => [
-              styles.button,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.buttonText}>Создать заявку</Text>
-          </Pressable>
-        </View>
+        ) : drafts.length === 0 ? (
+          <View style={styles.empty}>
+            <View style={styles.icon}>
+              <Text style={styles.iconText}>✎</Text>
+            </View>
+            <Text style={styles.emptyTitle}>Черновиков пока нет</Text>
+            <Text style={styles.emptyText}>
+              Незавершённые заявки будут автоматически сохраняться здесь.
+            </Text>
+            <Pressable
+              onPress={() => router.replace('/new-order')}
+              style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+            >
+              <Text style={styles.buttonText}>Создать заявку</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.list}>
+            {drafts.map((draft) => (
+              <View key={draft.id} style={styles.draftCard}>
+                <Text style={styles.draftTitle}>{draft.productType}</Text>
+                <Text style={styles.draftText}>
+                  Изменён {new Date(draft.updatedAt).toLocaleDateString('ru-RU')}
+                </Text>
+                <Text style={styles.draftText}>
+                  Параметров: {Object.keys(draft.data).length}
+                </Text>
+              </View>
+            ))}
+            <Pressable
+              onPress={() => router.replace('/new-order')}
+              style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+            >
+              <Text style={styles.buttonText}>Создать заявку</Text>
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -165,5 +188,27 @@ const styles = StyleSheet.create({
 
   pressed: {
     opacity: 0.72,
+  },
+  list: {
+    flex: 1,
+    paddingTop: 24,
+  },
+  draftCard: {
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceGlass,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 10,
+  },
+  draftTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  draftText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 5,
   },
 });

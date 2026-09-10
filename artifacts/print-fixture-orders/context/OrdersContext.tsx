@@ -39,7 +39,11 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         const parsed = JSON.parse(stored) as LocalDraft[];
         if (Array.isArray(parsed)) setDrafts(parsed);
       })
-      .catch(() => undefined)
+      .catch((error: unknown) => {
+        if (active) {
+          console.error('Failed to load local drafts:', error);
+        }
+      })
       .finally(() => {
         if (active) setIsLoading(false);
       });

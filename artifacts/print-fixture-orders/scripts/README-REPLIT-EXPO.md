@@ -1,25 +1,33 @@
 # Replit Expo runtime
 
-The mobile Expo runtime must be started by the Replit project workflow.
+The mobile artifact is routed through the Expo domain router:
 
-Do not permanently run:
+- artifact: `artifacts/print-fixture-orders`
+- router: `expo-domain`
+- port: `25034`
+- preview path: `/print-fixture-orders/`
+- health check: `/status`
 
-    pnpm exec expo start --port 8081
+Start the development runtime from the repository root with:
 
-or:
+    PORT=25034 pnpm -C artifacts/print-fixture-orders run dev
 
-    pnpm exec expo start --port 8082
+The Replit artifact workflow runs the same command automatically. The Expo
+command uses `--host lan`; do not replace it with `--host 0.0.0.0`.
 
-from a detached Shell process.
+The helper command is:
 
-The runtime must receive PORT from Replit.
+    pnpm -C artifacts/print-fixture-orders run replit:expo
 
-The helper script is:
+It defaults to port `25034` when `PORT` is not supplied. A healthy packager
+responds to:
 
-    scripts/replit-expo-start.sh
+    curl http://127.0.0.1:25034/status
 
-It starts Expo on:
+with:
 
-    0.0.0.0:$PORT
+    packager-status:running
 
-and does not hard-code a LAN IP.
+The `libglib-2.0.so.0` message from React Native DevTools may appear in the
+Replit environment. It is non-blocking when Metro remains running and the
+status endpoint responds.

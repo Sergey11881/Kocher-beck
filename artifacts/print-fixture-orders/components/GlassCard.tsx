@@ -35,9 +35,9 @@ export function GlassCard({ children, onPress, style }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.glass,
+    backgroundColor: colors.surfaceGlass,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: colors.border,
     borderRadius: radius.lg,
     padding: spacing.lg,
     ...shadows.card,
